@@ -1,8 +1,16 @@
 import type { DirectoryEntry } from '@aiaia/shared/src/schemas/content';
-import { Header, QueryState, Screen, Select, TextField, type SelectOption } from '@aiaia/ui';
+import {
+  Button,
+  Header,
+  QueryState,
+  Screen,
+  Select,
+  TextField,
+  type SelectOption,
+} from '@aiaia/ui';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useBranches, useDebouncedValue, useDirectorySearch } from './hooks';
 import { MemberCard } from './MemberCard';
 
@@ -54,9 +62,27 @@ export function DirectoryScreen() {
                   <MemberCard entry={item} />
                 </View>
               )}
+              ListFooterComponent={
+                search.isFetchingNextPage ? (
+                  <ActivityIndicator accessibilityLabel="Loading more members" />
+                ) : search.isFetchNextPageError ? (
+                  <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                    <Button
+                      title="Couldn't load more. Try again"
+                      variant="secondary"
+                      onPress={() => void search.fetchNextPage()}
+                    />
+                  </View>
+                ) : null
+              }
               onEndReachedThreshold={0.5}
               onEndReached={() => {
-                if (search.hasNextPage && !search.isFetchingNextPage) void search.fetchNextPage();
+                if (
+                  search.hasNextPage &&
+                  !search.isFetchingNextPage &&
+                  !search.isFetchNextPageError
+                )
+                  void search.fetchNextPage();
               }}
             />
           )}

@@ -13,6 +13,10 @@ export const REPORT_REASONS: readonly SelectOption[] = [
   { label: 'Other', value: 'other' },
 ];
 
+function isReportLimit(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === 'PT429';
+}
+
 /**
  * The Report action on a member card. P1-11 exports `<ReportButton targetType targetId>`; it is
  * not merged yet, so this is a small stand-in that files the same `submit_report` call. When
@@ -33,8 +37,13 @@ export function ReportMember({ memberId, name }: { memberId: string; name: strin
       setOpen(false);
       setReason(null);
       setDetails('');
-    } catch {
-      toast.error('We could not send your report. Please try again.');
+    } catch (error) {
+      // `submit_report` raises PT429 after 20 reports in 24 hours; retrying cannot succeed.
+      toast.error(
+        isReportLimit(error)
+          ? "You have reached today's report limit. Try again tomorrow."
+          : 'We could not send your report. Please try again.',
+      );
     } finally {
       setBusy(false);
     }

@@ -7,6 +7,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { telUrl, whatsappUrl } from './contact';
 import { DirectoryScreen } from './DirectoryScreen';
 
+const mockToastError = jest.fn();
+jest.mock('@aiaia/ui', () => ({
+  ...jest.requireActual('@aiaia/ui'),
+  toast: { success: jest.fn(), error: (...a: unknown[]) => mockToastError(...a) },
+}));
+
 const mockRpc = jest.fn();
 const mockOrder = jest.fn();
 jest.mock('@/lib/supabase', () => ({
@@ -133,5 +139,100 @@ describe('directory screen', () => {
     } finally {
       onlineManager.setOnline(true);
     }
+  });
+});
+
+describe('branch filter', () => {
+  it('passes the chosen branch_id to search_directory', async () => {
+    mockRpc.mockResolvedValue({ data: [entry()], error: null });
+    await renderScreen();
+    await screen.findByText('Zoya Sampleton');
+    await fireEvent.press(await screen.findByLabelText('Branch, All branches'));
+    await fireEvent.press(await screen.findByLabelText('Testpur'));
+    await waitFor(() =>
+      expect(mockRpc).toHaveBeenCalledWith('search_directory', { branch_id: 'b1', page: 1 }),
+    );
+  });
+});
+
+describe('failed searches', () => {
+  it('shows the error state with a retry when a new search fails (no silent stale results)', async () => {
+    mockRpc.mockImplementation((_fn: string, args: { q?: string }) =>
+      Promise.resolve(
+        args.q === 'nomatch'
+          ? { data: null, error: new Error('boom') }
+          : { data: [entry()], error: null },
+      ),
+    );
+    await renderScreen();
+    await screen.findByText('Zoya Sampleton');
+    await fireEvent.changeText(screen.getByLabelText('Search members'), 'nomatch');
+    expect(await screen.findByText('Something went wrong')).toBeTruthy();
+    expect(screen.getByText('Try again')).toBeTruthy();
+    expect(screen.queryByText('Zoya Sampleton')).toBeNull();
+  });
+
+  it('shows a load-more retry when the next page fails, and retries it', async () => {
+    const page1 = Array.from({ length: 25 }, (_, i) =>
+      entry({ id: 'm' + i, full_name: 'Member ' + i }),
+    );
+    let page2Fails = true;
+    mockRpc.mockImplementation((_fn: string, args: { page: number }) =>
+      Promise.resolve(
+        args.page === 1
+          ? { data: page1, error: null }
+          : page2Fails
+            ? { data: null, error: new Error('boom') }
+            : { data: [], error: null },
+      ),
+    );
+    await renderScreen();
+    await screen.findByText('Member 0');
+    await fireEvent(screen.getByText('Member 0'), 'endReached');
+    const retry = await screen.findByText("Couldn't load more. Try again");
+    const callsBefore = mockRpc.mock.calls.length;
+    page2Fails = false;
+    await fireEvent.press(retry);
+    await waitFor(() => expect(mockRpc.mock.calls.length).toBeGreaterThan(callsBefore));
+    await waitFor(() => expect(screen.queryByText("Couldn't load more. Try again")).toBeNull());
+  });
+});
+
+describe('report member', () => {
+  async function fileReport() {
+    await renderScreen();
+    await fireEvent.press(await screen.findByLabelText('Report Zoya Sampleton'));
+    await fireEvent.press(await screen.findByLabelText('Reason, Choose a reason'));
+    await fireEvent.press(await screen.findByLabelText('Spam'));
+    await fireEvent.press(await screen.findByText('Send report'));
+  }
+  function rpcWith(reportError: unknown) {
+    mockRpc.mockImplementation((fn: string) =>
+      Promise.resolve(
+        fn === 'submit_report'
+          ? { data: null, error: reportError }
+          : { data: [entry()], error: null },
+      ),
+    );
+  }
+
+  it('says the daily limit is reached on PT429', async () => {
+    rpcWith({ code: 'PT429', message: 'report limit' });
+    await fileReport();
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "You have reached today's report limit. Try again tomorrow.",
+      ),
+    );
+  });
+
+  it('keeps the generic message for other errors', async () => {
+    rpcWith({ code: '500', message: 'boom' });
+    await fileReport();
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        'We could not send your report. Please try again.',
+      ),
+    );
   });
 });
