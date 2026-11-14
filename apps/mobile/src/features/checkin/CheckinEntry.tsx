@@ -14,9 +14,6 @@ export function CheckinEntry({ eventId }: { eventId: string }) {
   });
   if (allowed.data !== true) return null;
   return (
-    <Button
-      title="Open check-in"
-      onPress={() => router.push(`/events/checkin/${eventId}` as Href)}
-    />
+    <Button title="Open check-in" onPress={() => router.push(`/checkin/${eventId}` as Href)} />
   );
 }

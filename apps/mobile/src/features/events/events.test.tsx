@@ -290,7 +290,7 @@ describe('list and duties', () => {
     ];
     await render(wrap(<MyDuties />));
     await fireEvent.press(await screen.findByRole('button', { name: 'Open check-in' }));
-    expect(mockPush).toHaveBeenCalledWith(`/events/checkin/${EVENT}`);
+    expect(mockPush).toHaveBeenCalledWith(`/checkin/${EVENT}`);
 
     world.duties = [{ ...world.duties[0], capabilities: ['collect_payments'] }];
     await render(wrap(<MyDuties />));

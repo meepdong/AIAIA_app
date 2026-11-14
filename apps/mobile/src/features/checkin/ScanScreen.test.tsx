@@ -17,6 +17,7 @@ import { ApiProvider } from '@/features/auth/useApi';
 import { confirmScan, evaluateScan } from './scan';
 import { createSqliteScanStore, type SqlDb } from './sqlite-scan-store';
 import { ScanScreen } from './ScanScreen';
+import { CheckinScreen } from './CheckinScreen';
 import type { ScanStore } from './scan-types';
 import { syncPending } from './sync';
 
@@ -48,6 +49,7 @@ let mockNetListener: ((s: typeof mockNet) => void) | undefined;
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: {
+    fetch: async () => mockNet,
     addEventListener: (cb: (s: typeof mockNet) => void) => {
       mockNetListener = cb;
       cb(mockNet);
@@ -156,9 +158,12 @@ describe('evaluateScan', () => {
     if (out.kind !== 'member') throw new Error('expected a member');
     await confirmScan(store, EVENT, out, ref);
     const [a, id, , sig] = qrFor(ASHA, 1).split('.') as [string, string, string, string];
-    expect(
-      await evaluateScan([a, id, '1', sig.slice(0, -2) + 'AA'].join('.'), PUBLIC, store, EVENT),
-    ).toEqual({
+    // Flip the FIRST signature character (all 6 bits significant) to one that is guaranteed different.
+    // Editing the tail is flaky: the last base64url char carries 4 unused bits, so a change there can
+    // decode to the same signature (and the key is random per run), leaving a genuine code.
+    const forgedSig = (sig[0] === 'A' ? 'B' : 'A') + sig.slice(1);
+    expect(forgedSig).not.toEqual(sig);
+    expect(await evaluateScan([a, id, '1', forgedSig].join('.'), PUBLIC, store, EVENT)).toEqual({
       kind: 'reject',
       reason: 'bad_signature',
     });
@@ -381,5 +386,58 @@ describe('scanner screen', () => {
     expect(await screen.findByText('Event pack downloaded: 1 registered.')).toBeTruthy();
     expect((await store.findMember(EVENT, WALKIN))?.full_name).toBe('Mia Fake');
     expect(await store.findMember(EVENT, ASHA)).toBeNull();
+  });
+});
+
+describe('check-in route guard', () => {
+  const canCheckIn = jest.fn();
+  const eventPack = jest.fn();
+  const api = {
+    checkin: { cacheOwner: async () => OWNER, syncCheckIns: jest.fn(), eventPack, canCheckIn },
+    _client: {},
+  } as unknown as Api;
+  const renderGuard = () =>
+    render(
+      <ApiProvider api={api}>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <CheckinScreen eventId={EVENT} />
+        </QueryClientProvider>
+      </ApiProvider>,
+    );
+  beforeEach(() => {
+    canCheckIn.mockReset();
+    eventPack.mockReset();
+  });
+
+  it('a member who is not on the team sees the friendly message and no pack is downloaded', async () => {
+    canCheckIn.mockResolvedValue(false);
+    await renderGuard();
+    expect(
+      await screen.findByText('You are not on the check-in team for this event.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Refresh event pack' })).toBeNull();
+    expect(eventPack).not.toHaveBeenCalled();
+    expect(canCheckIn).toHaveBeenCalledWith(EVENT);
+  });
+
+  it('shows a spinner while the staff check is pending', async () => {
+    canCheckIn.mockReturnValue(new Promise(() => undefined));
+    await renderGuard();
+    expect(screen.getByLabelText('Checking access')).toBeTruthy();
+  });
+
+  it('event staff see the scanner', async () => {
+    canCheckIn.mockResolvedValue(true);
+    await renderGuard();
+    expect(await screen.findByLabelText('Or type or paste the pass code')).toBeTruthy();
+  });
+
+  it('offline, the scanner still opens (the server refuses non-staff anyway)', async () => {
+    canCheckIn.mockResolvedValue(false);
+    mockNet = { isConnected: false, isInternetReachable: false };
+    await renderGuard();
+    expect(await screen.findByLabelText('Or type or paste the pass code')).toBeTruthy();
   });
 });

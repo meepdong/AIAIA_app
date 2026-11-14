@@ -33,7 +33,7 @@ export function MyDuties() {
                         <Button
                           variant="secondary"
                           title="Open check-in"
-                          onPress={() => router.push(`/events/checkin/${d.event_id}` as Href)}
+                          onPress={() => router.push(`/checkin/${d.event_id}` as Href)}
                         />
                       </View>
                     ) : null}
