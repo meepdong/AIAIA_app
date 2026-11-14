@@ -27,6 +27,8 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   android: {
     package: variant.androidPackage,
+    // Auto Backup would copy the check-in database (other members' data) to the staff member's Google Drive.
+    allowBackup: false,
     // Minimum set. Feature briefs add what they need (camera, notifications) next to their code.
     permissions: ['android.permission.INTERNET'],
     adaptiveIcon: {

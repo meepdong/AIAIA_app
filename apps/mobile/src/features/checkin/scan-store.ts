@@ -1,5 +1,5 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
-import { createSqliteScanStore } from './sqlite-scan-store';
+import { clearAllOwners, createSqliteScanStore, purgeExpiredAllOwners } from './sqlite-scan-store';
 import type { ScanStore } from './scan-types';
 
 // Native build: the pack and the scan queue live in a SQLite file in the app's private storage, so
@@ -21,5 +21,23 @@ export async function clearScanData(owner: string): Promise<void> {
     await (await openScanStore(owner)).clearForSignOut();
   } catch {
     // No store on this device, or it cannot be opened: nothing to clear.
+  }
+}
+
+/** The session ended without a sign-out press: forgets every user's packs and names on this device. */
+export async function clearAllScanData(): Promise<void> {
+  try {
+    await clearAllOwners(await (db ??= openDatabaseAsync('aiaia-checkin.db')));
+  } catch {
+    db = undefined;
+  }
+}
+
+/** App start: drops packs of events that ended more than a day ago. */
+export async function purgeExpiredScanData(): Promise<void> {
+  try {
+    await purgeExpiredAllOwners(await (db ??= openDatabaseAsync('aiaia-checkin.db')));
+  } catch {
+    db = undefined;
   }
 }

@@ -1,5 +1,6 @@
 // Keys are generated here at test time; nothing secret is committed.
 import {
+  ScanError,
   base64UrlEncode,
   encodePassQr,
   passMessage,
@@ -15,7 +16,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ApiProvider } from '@/features/auth/useApi';
 import { confirmScan, evaluateScan } from './scan';
-import { createSqliteScanStore, type SqlDb } from './sqlite-scan-store';
+import {
+  clearAllOwners,
+  createSqliteScanStore,
+  purgeExpiredAllOwners,
+  type SqlDb,
+} from './sqlite-scan-store';
 import { ScanScreen } from './ScanScreen';
 import { CheckinScreen } from './CheckinScreen';
 import type { ScanStore } from './scan-types';
@@ -196,6 +202,63 @@ describe('evaluateScan', () => {
   });
 });
 
+describe('packs do not outlive their event', () => {
+  const EVENT2 = 'e0000000-0000-4000-8000-000000000002';
+  const day = 24 * 60 * 60 * 1000;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const named = (id: string, event: string, status: 'pending' | 'accepted') => ({
+    client_ref: id,
+    event_id: event,
+    member_id: ASHA,
+    pass_version: 1,
+    scanned_at: '2026-11-16T05:00:00.000Z',
+    walk_in: false,
+    status,
+    reason: null,
+    full_name: 'Asha Fake',
+    branch_name: 'Test Branch',
+  });
+
+  it('expiry: a pack and its names go a day after the event ends, on the next open', async () => {
+    const now = Date.now();
+    await store.savePack(EVENT2, [pack(RAVI, 'Ravi Fake')], iso(now), iso(now - 2 * day));
+    await store.addScan(named('old-done', EVENT2, 'accepted'));
+    await store.addScan(named('old-wait', EVENT2, 'pending'));
+    // EVENT (saved in beforeEach, no end time, downloaded just now) is untouched.
+    const reopened = await createSqliteScanStore(mockDb, OWNER);
+    expect(await reopened.packInfo(EVENT2)).toBeNull();
+    expect(await reopened.findMember(EVENT2, RAVI)).toBeNull();
+    const left = await reopened.listScans(EVENT2);
+    expect(left.map((x) => [x.client_ref, x.full_name])).toEqual([['old-wait', null]]);
+    expect(await reopened.packInfo(EVENT)).not.toBeNull();
+  });
+
+  it('expiry: an event that ended under a day ago keeps its pack; app start purges every user', async () => {
+    const now = Date.now();
+    await store.savePack(EVENT2, [pack(RAVI, 'Ravi Fake')], iso(now), iso(now - day / 2));
+    await createSqliteScanStore(mockDb, OWNER);
+    expect(await store.packInfo(EVENT2)).not.toBeNull();
+
+    const other = await createSqliteScanStore(mockDb, 'someone-else');
+    await other.savePack(EVENT2, [pack(RAVI, 'Ravi Fake')], iso(now), iso(now - 3 * day));
+    await purgeExpiredAllOwners(mockDb);
+    expect(await other.packInfo(EVENT2)).toBeNull();
+    expect(await store.packInfo(EVENT2)).not.toBeNull();
+  });
+
+  it('session loss: all packs and finished scans are cleared, unsent scans lose their names', async () => {
+    await store.addScan(named('done', EVENT, 'accepted'));
+    await store.addScan(named('wait', EVENT, 'pending'));
+    const other = await createSqliteScanStore(mockDb, 'someone-else');
+    await other.savePack(EVENT, [pack(RAVI, 'Ravi Fake')], new Date().toISOString());
+    await clearAllOwners(mockDb);
+    expect(await store.packInfo(EVENT)).toBeNull();
+    expect(await other.packInfo(EVENT)).toBeNull();
+    const left = await store.listScans(EVENT);
+    expect(left.map((x) => [x.client_ref, x.full_name])).toEqual([['wait', null]]);
+  });
+});
+
 describe('scan queue', () => {
   it('queue persists: a scan written before a restart is still there afterwards', async () => {
     const out = await evaluateScan(qrFor(ASHA, 1), PUBLIC, store, EVENT);
@@ -286,8 +349,10 @@ describe('scan queue', () => {
 describe('scanner screen', () => {
   const syncCheckIns = jest.fn();
   const eventPack = jest.fn();
+  const getEvent = jest.fn();
   const api = {
     checkin: { cacheOwner: async () => OWNER, syncCheckIns, eventPack },
+    events: { getEvent },
     _client: {},
   } as unknown as Api;
   const renderScreen = (publicKey: string = PUBLIC) =>
@@ -308,6 +373,8 @@ describe('scanner screen', () => {
   beforeEach(() => {
     syncCheckIns.mockReset();
     eventPack.mockReset();
+    getEvent.mockReset();
+    getEvent.mockResolvedValue({ ends_at: '2026-12-01T12:00:00.000Z' });
     mockNet = { isConnected: false, isInternetReachable: false };
   });
 
@@ -379,12 +446,41 @@ describe('scanner screen', () => {
     expect(screen.getByText(/1 rejected/)).toBeTruthy();
   });
 
-  it('downloads the event pack and stores it', async () => {
+  it('a refused pack download (42501) deletes the pack of that event from the device', async () => {
+    eventPack.mockRejectedValue(new ScanError('not_allowed'));
+    await renderScreen();
+    expect(await store.packInfo(EVENT)).not.toBeNull();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Refresh event pack' }));
+    expect(await screen.findByText(/check people in/)).toBeTruthy();
+    expect(await store.packInfo(EVENT)).toBeNull();
+    expect(await store.findMember(EVENT, ASHA)).toBeNull();
+  });
+
+  it('a refused upload (42501) deletes the pack and the names, keeps the unsent scan', async () => {
+    syncCheckIns.mockRejectedValue(new ScanError('not_allowed'));
+    await renderScreen();
+    await check(qrFor(ASHA, 1));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Confirm' }));
+    expect(await screen.findByText('Waiting')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Upload' }));
+    await waitFor(() => expect(syncCheckIns).toHaveBeenCalled());
+    await waitFor(async () => expect(await store.packInfo(EVENT)).toBeNull());
+    const left = await store.listScans(EVENT);
+    expect(left).toHaveLength(1);
+    expect(left[0]?.full_name).toBeNull();
+  });
+
+  it('downloads the event pack with its end time and stores it', async () => {
     eventPack.mockResolvedValue([pack(WALKIN, 'Mia Fake')]);
     await renderScreen();
     await fireEvent.press(await screen.findByRole('button', { name: 'Refresh event pack' }));
     expect(await screen.findByText('Event pack downloaded: 1 registered.')).toBeTruthy();
     expect((await store.findMember(EVENT, WALKIN))?.full_name).toBe('Mia Fake');
+    const row = await mockDb.getFirstAsync<{ ends_at: string }>(
+      'select ends_at from packs where event_id = ?',
+      [EVENT],
+    );
+    expect(row?.ends_at).toBe('2026-12-01T12:00:00.000Z');
     expect(await store.findMember(EVENT, ASHA)).toBeNull();
   });
 });

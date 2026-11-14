@@ -62,24 +62,35 @@ describe('checkin pass verification', () => {
     expect(verifyPass(qr, keys.publicB64.slice(0, 20))).toEqual({ ok: false, reason: 'no_key' });
   });
 
-  it('rejects malformed and non-canonical encodings', () => {
+  it('rejects malformed and non-canonical encodings, each for its own reason', () => {
     const qr = signedQr(keys.privateKey, MEMBER, 7);
     const [prefix, id, version, sig] = qr.split('.') as [string, string, string, string];
-    const bad = [
-      '',
-      'hello',
-      qr + '.x',
-      ['AIAIA2', id, version, sig].join('.'),
-      [prefix, id, '07', sig].join('.'),
-      [prefix, id, '0', sig].join('.'),
-      [prefix, id, '-7', sig].join('.'),
-      [prefix, id, version, sig.slice(0, -1)].join('.'),
-      [prefix, id + 'A', version, sig].join('.'),
-      [prefix, id.slice(0, -1) + (id.endsWith('A') ? 'B' : 'A'), version, sig].join('.'),
-      [prefix, id, version, sig + '='].join('.'),
+    // The uuid is 16 bytes, so its base64url text ends in two spare bits that must be zero.
+    // Changing only those bits still decodes to the same uuid; only the canonical check catches it.
+    expect(id.slice(-1)).toBe('Q');
+    const padBits = id.slice(0, -1) + 'R';
+    const cases: [string, string][] = [
+      ['', 'malformed'],
+      ['hello', 'malformed'],
+      [qr + '.x', 'malformed'],
+      [['AIAIA2', id, version, sig].join('.'), 'malformed'],
+      [[prefix, id, '07', sig].join('.'), 'malformed'],
+      [[prefix, id, '0', sig].join('.'), 'malformed'],
+      [[prefix, id, '-7', sig].join('.'), 'malformed'],
+      [[prefix, id, version, sig.slice(0, -1)].join('.'), 'malformed'],
+      [[prefix, id + 'A', version, sig].join('.'), 'malformed'],
+      [[prefix, padBits, version, sig].join('.'), 'malformed'],
+      [[prefix, id, version, sig + '='].join('.'), 'malformed'],
+      // A different but valid uuid under the old signature: well formed, wrong signature.
+      [
+        [prefix, id.slice(0, -2) + (id.slice(-2, -1) === 'A' ? 'B' : 'A') + 'Q', version, sig].join(
+          '.',
+        ),
+        'bad_signature',
+      ],
     ];
-    for (const text of bad) {
-      expect(verifyPass(text, keys.publicB64).ok).toBe(false);
+    for (const [text, reason] of cases) {
+      expect([text, verifyPass(text, keys.publicB64)]).toEqual([text, { ok: false, reason }]);
     }
   });
 

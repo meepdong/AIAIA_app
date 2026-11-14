@@ -47,7 +47,7 @@ export function ScanScreen({
   publicKey?: string;
 }) {
   const router = useRouter();
-  const { checkin } = useApi();
+  const { checkin, events } = useApi();
   const [permission, requestPermission] = useCameraPermissions();
   const store = useRef<ScanStore | null>(null);
   const syncing = useRef(false);
@@ -111,6 +111,10 @@ export function ScanScreen({
           : `Uploaded: ${r.accepted} accepted${bad ? `, ${bad} rejected` : ''}.`,
       );
     } catch (e) {
+      // The server no longer lets this person check in here: nothing about the event stays.
+      if (e instanceof ScanError && e.code === 'not_allowed') {
+        await s.dropEvent(eventId).catch(() => undefined);
+      }
       setSyncNote(`Could not upload. ${errorText(e)} Scans are kept on this device.`);
     } finally {
       syncing.current = false;
@@ -132,9 +136,17 @@ export function ScanScreen({
     setNotice(null);
     try {
       const rows = await checkin.eventPack(eventId);
-      await s.savePack(eventId, rows, new Date().toISOString());
+      // The pack is purged a day after the event ends; without the end time it counts from now.
+      const endsAt = await events
+        ?.getEvent(eventId)
+        .then((ev) => ev?.ends_at ?? null)
+        .catch(() => null);
+      await s.savePack(eventId, rows, new Date().toISOString(), endsAt ?? null);
       setNotice(`Event pack downloaded: ${rows.length} registered.`);
     } catch (e) {
+      if (e instanceof ScanError && e.code === 'not_allowed') {
+        await s.dropEvent(eventId).catch(() => undefined);
+      }
       setNotice(`Could not download the pack. ${errorText(e)}`);
     } finally {
       setBusy(null);

@@ -16,6 +16,12 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+const mockClearAll = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/checkin/scan-store', () => ({
+  clearAllScanData: () => mockClearAll(),
+  purgeExpiredScanData: jest.fn().mockResolvedValue(undefined),
+}));
+
 type Listener = (session: unknown, event: string) => void;
 
 let emit: Listener;
@@ -224,6 +230,18 @@ describe('auth gate: configuration and dev override', () => {
     await renderGate();
     expect(state()).toBe('loading');
     expect(mockAuth.onSession).toHaveBeenCalled();
+  });
+});
+
+describe('session ending without a sign-out press', () => {
+  it('clears the saved event packs on this device; a live session does not', async () => {
+    mockClearAll.mockClear();
+    await renderGate();
+    await signIn(member('active'));
+    expect(mockClearAll).not.toHaveBeenCalled();
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    expect(state()).toBe('signed_out');
+    expect(mockClearAll).toHaveBeenCalledTimes(1);
   });
 });
 

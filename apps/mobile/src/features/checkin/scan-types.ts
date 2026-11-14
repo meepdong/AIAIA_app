@@ -29,7 +29,13 @@ export type PackInfo = { downloadedAt: string; count: number };
  */
 export interface ScanStore {
   /** Replaces the pack of one event. Scans already queued are untouched. */
-  savePack(eventId: string, rows: PackMember[], downloadedAt: string): Promise<void>;
+  savePack(
+    eventId: string,
+    rows: PackMember[],
+    downloadedAt: string,
+    /** The event's ends_at; the pack is purged a day after it. */
+    endsAt?: string | null,
+  ): Promise<void>;
   packInfo(eventId: string): Promise<PackInfo | null>;
   findMember(eventId: string, memberId: string): Promise<PackMember | null>;
   addScan(scan: QueuedScan): Promise<void>;
@@ -45,4 +51,8 @@ export interface ScanStore {
   ): Promise<void>;
   /** Sign-out: drops the packs (personal data) and finished scans; unsent scans stay for next sign-in. */
   clearForSignOut(): Promise<void>;
+  /** The server refused this event (42501): drops its pack and the names on its scans. */
+  dropEvent(eventId: string): Promise<void>;
+  /** Drops packs (and names on scans) of events that ended more than a day before `now`. */
+  purgeExpired(now?: Date): Promise<void>;
 }

@@ -1,5 +1,10 @@
 import type { PackMember } from '@aiaia/api';
-import { clearScanData, openScanStore } from './scan-store.web';
+import {
+  clearAllScanData,
+  clearScanData,
+  openScanStore,
+  purgeExpiredScanData,
+} from './scan-store.web';
 import type { QueuedScan } from './scan-types';
 
 const EVENT = 'e0000000-0000-4000-8000-000000000001';
@@ -36,6 +41,10 @@ beforeEach(() => {
     localStorage: {
       getItem: (k: string) => memory.get(k) ?? null,
       setItem: (k: string, v: string) => void memory.set(k, v),
+      get length() {
+        return memory.size;
+      },
+      key: (i: number) => [...memory.keys()][i] ?? null,
     },
   };
 });
@@ -70,5 +79,69 @@ describe('web scan store (localStorage), same contract as the SQLite one', () =>
     const left = await s.listScans(EVENT);
     expect(left.map((x) => x.client_ref)).toEqual(['r3']);
     expect(left[0]?.full_name).toBeNull();
+  });
+});
+
+describe('packs do not outlive their event', () => {
+  const EVENT2 = 'e0000000-0000-4000-8000-000000000002';
+  const day = 24 * 60 * 60 * 1000;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const onEvent2 = (ref: string, status: QueuedScan['status']): QueuedScan => ({
+    ...scan(ref, '2026-11-16T05:00:00.000Z'),
+    event_id: EVENT2,
+    status,
+  });
+
+  it('expiry: a pack and its names go a day after the event ends, on the next open', async () => {
+    const now = Date.now();
+    const a = await openScanStore(OWNER);
+    await a.savePack(EVENT2, [member], iso(now), iso(now - 2 * day));
+    await a.savePack(EVENT, [member], iso(now), iso(now - day / 2));
+    await a.addScan(onEvent2('old-done', 'accepted'));
+    await a.addScan(onEvent2('old-wait', 'pending'));
+
+    const b = await openScanStore(OWNER);
+    expect(await b.packInfo(EVENT2)).toBeNull();
+    expect((await b.listScans(EVENT2)).map((x) => [x.client_ref, x.full_name])).toEqual([
+      ['old-wait', null],
+    ]);
+    expect(await b.packInfo(EVENT)).not.toBeNull();
+  });
+
+  it('expiry: app start purges every user', async () => {
+    const now = Date.now();
+    const a = await openScanStore(OWNER);
+    await a.savePack(EVENT2, [member], iso(now), iso(now - 3 * day));
+    await purgeExpiredScanData();
+    expect(await a.packInfo(EVENT2)).toBeNull();
+  });
+
+  it('a refused event (42501): dropEvent removes that pack and the names, keeps unsent scans', async () => {
+    const a = await openScanStore(OWNER);
+    await a.savePack(EVENT, [member], iso(Date.now()));
+    await a.savePack(EVENT2, [member], iso(Date.now()));
+    await a.addScan(onEvent2('done', 'accepted'));
+    await a.addScan(onEvent2('wait', 'pending'));
+    await a.dropEvent(EVENT2);
+    expect(await a.packInfo(EVENT2)).toBeNull();
+    expect(await a.packInfo(EVENT)).not.toBeNull();
+    expect((await a.listScans(EVENT2)).map((x) => [x.client_ref, x.full_name])).toEqual([
+      ['wait', null],
+    ]);
+  });
+
+  it('session loss: all packs and finished scans are cleared, unsent scans lose their names', async () => {
+    const a = await openScanStore(OWNER);
+    const b = await openScanStore('someone-else');
+    await a.savePack(EVENT, [member], iso(Date.now()));
+    await b.savePack(EVENT, [member], iso(Date.now()));
+    await a.addScan({ ...scan('done', '2026-11-16T05:00:00.000Z'), status: 'accepted' });
+    await a.addScan(scan('wait', '2026-11-16T05:01:00.000Z'));
+    await clearAllScanData();
+    expect(await a.packInfo(EVENT)).toBeNull();
+    expect(await b.packInfo(EVENT)).toBeNull();
+    expect((await a.listScans(EVENT)).map((x) => [x.client_ref, x.full_name])).toEqual([
+      ['wait', null],
+    ]);
   });
 });

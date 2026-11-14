@@ -10,11 +10,66 @@ import type { PackInfo, QueuedScan, ScanStore } from './scan-types';
  */
 
 type Doc = {
-  packs: Record<string, { downloadedAt: string; rows: PackMember[] }>;
+  packs: Record<string, { downloadedAt: string; endsAt?: string | null; rows: PackMember[] }>;
   scans: QueuedScan[];
 };
 
-const keyOf = (owner: string) => `aiaia.checkin.v1.${owner}`;
+const PREFIX = 'aiaia.checkin.v1.';
+const keyOf = (owner: string) => `${PREFIX}${owner}`;
+/** A pack and the names on finished scans go a day after the event ends, as the server stops serving the pack. */
+const PACK_GRACE_MS = 24 * 60 * 60 * 1000;
+
+function wipeEvent(d: Doc, eventId: string | null): void {
+  const gone = (id: string) => eventId === null || id === eventId;
+  for (const id of Object.keys(d.packs)) if (gone(id)) delete d.packs[id];
+  d.scans = d.scans
+    .filter((s) => !gone(s.event_id) || s.status === 'pending')
+    // Unsent scans stay without names.
+    .map((s) => (gone(s.event_id) ? { ...s, full_name: null, branch_name: null } : s));
+}
+
+function purgeDoc(d: Doc, now: Date): void {
+  for (const [id, p] of Object.entries(d.packs)) {
+    const base = Date.parse(p.endsAt ?? p.downloadedAt);
+    if (Number.isNaN(base) || now.getTime() > base + PACK_GRACE_MS) wipeEvent(d, id);
+  }
+}
+
+function owners(): string[] {
+  const out: string[] = [];
+  const ls = window.localStorage;
+  for (let i = 0; i < ls.length; i++) {
+    const k = ls.key(i);
+    if (k?.startsWith(PREFIX)) out.push(k.slice(PREFIX.length));
+  }
+  return out;
+}
+
+/** The session ended without a sign-out press: forgets every user's packs and names on this device. */
+export async function clearAllScanData(): Promise<void> {
+  try {
+    for (const o of owners()) {
+      const d = read(o);
+      wipeEvent(d, null);
+      write(o, d);
+    }
+  } catch {
+    // Storage blocked: nothing to clear.
+  }
+}
+
+/** App start: drops packs of events that ended more than a day ago. */
+export async function purgeExpiredScanData(): Promise<void> {
+  try {
+    for (const o of owners()) {
+      const d = read(o);
+      purgeDoc(d, new Date());
+      write(o, d);
+    }
+  } catch {
+    // Storage blocked: nothing to purge.
+  }
+}
 
 function read(owner: string): Doc {
   try {
@@ -39,11 +94,22 @@ export async function openScanStore(owner: string): Promise<ScanStore> {
     change(d);
     write(owner, d);
   };
+  try {
+    update((d) => purgeDoc(d, new Date()));
+  } catch {
+    // Storage blocked: writes will report it.
+  }
   return {
-    async savePack(eventId, rows, downloadedAt) {
+    async savePack(eventId, rows, downloadedAt, endsAt = null) {
       update((d) => {
-        d.packs[eventId] = { downloadedAt, rows };
+        d.packs[eventId] = { downloadedAt, endsAt, rows };
       });
+    },
+    async dropEvent(eventId) {
+      update((d) => wipeEvent(d, eventId));
+    },
+    async purgeExpired(now = new Date()) {
+      update((d) => purgeDoc(d, now));
     },
     async packInfo(eventId): Promise<PackInfo | null> {
       const p = read(owner).packs[eventId];
@@ -93,12 +159,7 @@ export async function openScanStore(owner: string): Promise<ScanStore> {
       });
     },
     async clearForSignOut() {
-      update((d) => {
-        d.packs = {};
-        d.scans = d.scans
-          .filter((s) => s.status === 'pending')
-          .map((s) => ({ ...s, full_name: null, branch_name: null }));
-      });
+      update((d) => wipeEvent(d, null));
     },
   };
 }

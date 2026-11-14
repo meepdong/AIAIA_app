@@ -2,6 +2,7 @@ import type { Api, Membership } from '@aiaia/api';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useApiGetter } from '@/features/auth/useApi';
 import { useAutoRefreshOnForeground } from '@/features/auth/useAutoRefresh';
+import { clearAllScanData, purgeExpiredScanData } from '@/features/checkin/scan-store';
 
 /**
  * The auth-gate states, mirroring docs/build/01-architecture.md §7. `SessionProvider` derives the
@@ -110,10 +111,14 @@ function useRealSessionState(): SessionState {
       }
     };
 
+    // App start: event packs of events that ended more than a day ago are not kept.
+    void purgeExpiredScanData();
     const off = auth.onSession((session) => {
       run += 1;
       clearTimeout(retry);
       if (!session) {
+        // Ended without a sign-out press (expired, revoked): other people's data must not stay.
+        void clearAllScanData();
         setState('signed_out');
         return;
       }

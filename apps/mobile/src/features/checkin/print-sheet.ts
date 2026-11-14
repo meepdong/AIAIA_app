@@ -60,6 +60,8 @@ export async function printSheet(title: string, passes: readonly BulkPass[]): Pr
   const html = sheetHtml(title, passes, svgs);
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
+  // No scripts may run in the sheet. print() is called from the parent, which same-origin allows.
+  frame.setAttribute('sandbox', 'allow-modals allow-same-origin');
   frame.style.position = 'fixed';
   frame.style.width = '0';
   frame.style.height = '0';

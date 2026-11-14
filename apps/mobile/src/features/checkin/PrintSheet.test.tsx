@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { ApiProvider } from '@/features/auth/useApi';
 import { PrintSheetScreen } from './PrintSheetScreen';
-import { chunkPages, PASSES_PER_PAGE, sheetHtml } from './print-sheet';
+import { chunkPages, PASSES_PER_PAGE, printSheet, sheetHtml } from './print-sheet';
 
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
@@ -70,6 +70,39 @@ describe('bulk print layout', () => {
     expect(html).toContain('<svg>AIAIA1.qr-8</svg>');
     expect(html).toContain('Asha &lt;b&gt;Fake&lt;/b&gt;');
     expect(html).not.toContain('<b>Fake</b>');
+  });
+});
+
+describe('printSheet iframe', () => {
+  it('is sandboxed without scripts, set before the document is loaded', async () => {
+    const attrs: Record<string, string> = {};
+    const order: string[] = [];
+    const frame = {
+      style: {} as Record<string, string>,
+      contentWindow: { focus: jest.fn(), print: jest.fn() },
+      remove: jest.fn(),
+      onload: null as null | (() => void),
+      setAttribute: (k: string, v: string) => {
+        attrs[k] = v;
+        order.push(k);
+      },
+      set srcdoc(_v: string) {
+        order.push('srcdoc');
+        queueMicrotask(() => frame.onload?.());
+      },
+    };
+    const g = globalThis as { document?: unknown };
+    const before = g.document;
+    g.document = { createElement: () => frame, body: { appendChild: jest.fn() } };
+    try {
+      await printSheet('Event', []);
+    } finally {
+      g.document = before;
+    }
+    expect(attrs.sandbox).toBe('allow-modals allow-same-origin');
+    expect(attrs.sandbox).not.toContain('allow-scripts');
+    expect(order.indexOf('sandbox')).toBeLessThan(order.indexOf('srcdoc'));
+    expect(frame.contentWindow.print).toHaveBeenCalled();
   });
 });
 

@@ -14,6 +14,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The seed is printed to stdout, so never run this where output is logged (an agent, CI, a pipe).
+if (!process.stdout.isTTY || process.env.CI) {
+  console.error(
+    'Refusing to run: this prints the private signing seed. Run it by hand in a terminal, not in CI or a pipe.',
+  );
+  process.exit(1);
+}
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const flag = process.argv.indexOf('--config');
 const configPath =

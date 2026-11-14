@@ -12,7 +12,7 @@ export interface SqlDb {
 
 const SCHEMA = `
 create table if not exists packs (
-  owner text not null, event_id text not null, downloaded_at text not null,
+  owner text not null, event_id text not null, downloaded_at text not null, ends_at text,
   primary key (owner, event_id)
 );
 create table if not exists pack_members (
@@ -31,6 +31,63 @@ create table if not exists scans (
 create index if not exists scans_by_member on scans (owner, event_id, member_id);
 `;
 
+/** A pack, and the names on finished scans, go once the server would no longer serve the pack: a day after the event. */
+export const PACK_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/** Drops packs and names for one event (or all of an owner's, or everyone's when `owner` is null). */
+async function wipe(db: SqlDb, owner: string | null, eventId: string | null) {
+  const scope = `(? is null or owner = ?) and (? is null or event_id = ?)`;
+  const args = [owner, owner, eventId, eventId];
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(`delete from pack_members where ${scope}`, args);
+    await db.runAsync(`delete from packs where ${scope}`, args);
+    await db.runAsync(`delete from scans where ${scope} and status <> 'pending'`, args);
+    // What stays is only waiting to be uploaded: ids and times, no names.
+    await db.runAsync(`update scans set full_name = null, branch_name = null where ${scope}`, args);
+  });
+}
+
+/** Clears every signed-in user's packs and names on this device (the session ended without a sign-out). */
+export async function clearAllOwners(db: SqlDb): Promise<void> {
+  await db.execAsync(SCHEMA);
+  await migrate(db);
+  await wipe(db, null, null);
+}
+
+async function purgeExpired(db: SqlDb, owner: string | null, now: Date): Promise<void> {
+  const packs = await db.getAllAsync<{
+    owner: string;
+    event_id: string;
+    downloaded_at: string;
+    ends_at: string | null;
+  }>('select owner, event_id, downloaded_at, ends_at from packs where (? is null or owner = ?)', [
+    owner,
+    owner,
+  ]);
+  for (const p of packs) {
+    // A pack saved without an end time counts from its download.
+    const base = Date.parse(p.ends_at ?? p.downloaded_at);
+    if (Number.isNaN(base) || now.getTime() > base + PACK_GRACE_MS) {
+      await wipe(db, p.owner, p.event_id);
+    }
+  }
+}
+
+/** Purges expired packs for every user of this device (app start). */
+export async function purgeExpiredAllOwners(db: SqlDb, now = new Date()): Promise<void> {
+  await db.execAsync(SCHEMA);
+  await migrate(db);
+  await purgeExpired(db, null, now);
+}
+
+async function migrate(db: SqlDb): Promise<void> {
+  // A database made before packs had an end time.
+  const cols = await db.getAllAsync<{ name: string }>('pragma table_info(packs)', []);
+  if (!cols.some((c) => c.name === 'ends_at')) {
+    await db.execAsync('alter table packs add column ends_at text');
+  }
+}
+
 type MemberRow = Omit<PackMember, 'guardian_names'> & { guardian_names: string };
 
 function parseNames(raw: string): string[] {
@@ -48,9 +105,11 @@ const toScan = (r: ScanRow): QueuedScan => ({ ...r, walk_in: r.walk_in === 1 });
 /** The scan store on SQLite. Creates the tables if needed; every query is scoped to `owner`. */
 export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<ScanStore> {
   await db.execAsync(SCHEMA);
+  await migrate(db);
+  await purgeExpired(db, owner, new Date());
 
   return {
-    async savePack(eventId, rows, downloadedAt) {
+    async savePack(eventId, rows, downloadedAt, endsAt = null) {
       await db.withTransactionAsync(async () => {
         await db.runAsync('delete from pack_members where owner = ? and event_id = ?', [
           owner,
@@ -74,8 +133,8 @@ export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<S
           );
         }
         await db.runAsync(
-          'insert or replace into packs (owner, event_id, downloaded_at) values (?, ?, ?)',
-          [owner, eventId, downloadedAt],
+          'insert or replace into packs (owner, event_id, downloaded_at, ends_at) values (?, ?, ?, ?)',
+          [owner, eventId, downloadedAt, endsAt],
         );
       });
     },
@@ -162,15 +221,15 @@ export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<S
     },
 
     async clearForSignOut() {
-      await db.withTransactionAsync(async () => {
-        await db.runAsync('delete from pack_members where owner = ?', [owner]);
-        await db.runAsync('delete from packs where owner = ?', [owner]);
-        await db.runAsync("delete from scans where owner = ? and status <> 'pending'", [owner]);
-        // What stays is only waiting to be uploaded: ids and times, no names.
-        await db.runAsync('update scans set full_name = null, branch_name = null where owner = ?', [
-          owner,
-        ]);
-      });
+      await wipe(db, owner, null);
+    },
+
+    async dropEvent(eventId) {
+      await wipe(db, owner, eventId);
+    },
+
+    async purgeExpired(now = new Date()) {
+      await purgeExpired(db, owner, now);
     },
   };
 }
