@@ -65,13 +65,13 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P1-00a | Phase-1 tables + RLS | done | — | merged 046e0e4 (local) | 2 security rounds + minor round; 322 tests. Pulled forward into wave 0b |
 | P1-00b | Membership & roles RPCs | done | — | merged e05b60c (local) | Security review: changes required, then 3 fix rounds (claim-code rate limit and 8-character codes, helper privilege pins, no self-assigned roles, generic info-request body, DOB lock for dependents, active-guardian filters). 626 tests on the branch |
 | P1-00c | Content & operations RPCs | done | — | merged 8c4b6cd (local) | Security review: pass with minors, all 7 fixed in 1 round. At merge, `p1_00c_reports` switched from a stub to the real `block_member` (pinned). Main: 941 DB tests |
-| P1-01 | Phone OTP auth | todo | (real OTP: B1/B2 B3) | | |
+| P1-01 | Phone OTP auth | in-progress | (real OTP: B1/B2 B3) | feat/P1-01 | Stack: default aiaia-app (543xx) |
 | P1-02 | Profile, minors, guardians, waiting room | todo | — | | |
 | P1-03 | Approvals | todo | B4 | | |
-| P1-04 | Admin shell, members, roles, audit | todo | B4 | | |
-| P1-05 | Directory | todo | — | | |
+| P1-04 | Admin shell, members, roles, audit | in-progress | B4 | feat/P1-04 | Own stack aiaia-app-b (544xx) |
+| P1-05 | Directory | in-progress | — | feat/P1-05 | Own stack aiaia-app-c (545xx) |
 | P1-06 | Notifications, push, web push, PWA | todo | A3 | | |
-| P1-07a | Events, RSVP, reminders | todo | — | | |
+| P1-07a | Events, RSVP, reminders | in-progress | — | feat/P1-07a | Own stack aiaia-app-d (546xx) |
 | P1-07b | Delegate passes & offline check-in | todo | — | | |
 | P1-08 | Roster import/export | todo | — | | |
 | P1-09 | Public website & policy pages | done | (approval: C2) | merged 710841e (local) | Review PASS WITH MINORS, fixed. `[TO BE PROVIDED BY AIAIA]` placeholders in docs/legal/ await C2; flip `app_settings.legal_approved` to true when approved |
@@ -135,7 +135,7 @@ The team is three people: a UI dev, a backend dev and the owner (project lead, c
 7. ☐ **One schema change in flight at a time.** Either the backend dev owns all migrations, or a migration slot rule applies: rebase and re-timestamp before merging, with CI's `check-migration-order` enforcing it.
 8. ☐ **Delegate approvals.** Each dev approves PRs in their own area. The owner approves only contract and security PRs, so the owner doesn't become the bottleneck.
 9. ☐ **Walkthrough (30 min) with both devs.** Cover the architecture, `AGENTS.md`, how a brief works, and the build dashboard (`node scripts/build-status.mjs`).
-10. ☐ **First briefs are small.** P1-05 (Directory) goes to the UI dev and P1-07a (Events) to the backend dev, to shake out the workflow before the big briefs.
+10. ☐ **First briefs are small.** (2026-11-14: the owner chose to have agents build wave 1c, P1-05 and P1-07a included, so the devs’ first briefs come from a later wave.) P1-05 (Directory) goes to the UI dev and P1-07a (Events) to the backend dev, to shake out the workflow before the big briefs.
 
 **Risk to watch:** humans and agents editing the same area. Keep the Assignee column strictly current.
 
