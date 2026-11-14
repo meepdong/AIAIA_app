@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@aiaia/shared';
+import { createAdminApi } from './admin';
 import { createAuthApi } from './auth';
 import { createDirectoryApi } from './directory';
 import { createEventsApi } from './events';
@@ -17,6 +18,7 @@ export type Client = SupabaseClient<Database>;
 export function createApi(client: Client) {
   return {
     // feature registrations go here
+    admin: createAdminApi(client),
     auth: createAuthApi(client),
     directory: createDirectoryApi(client),
     events: createEventsApi(client),
@@ -27,3 +29,4 @@ export function createApi(client: Client) {
 
 export type Api = ReturnType<typeof createApi>;
 export * from './events';
+export * from './admin';

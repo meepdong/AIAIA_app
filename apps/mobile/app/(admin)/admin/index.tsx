@@ -1,5 +1,7 @@
-import { Placeholder } from '@/components/Placeholder';
+import { useRouter, type Href } from 'expo-router';
+import { DashboardScreen } from '@/features/admin/dashboard/DashboardScreen';
 
 export default function AdminHomeScreen() {
-  return <Placeholder title="Admin console" note="Placeholder admin area." />;
+  const router = useRouter();
+  return <DashboardScreen onOpenPending={() => router.push('/members?status=pending' as Href)} />;
 }
