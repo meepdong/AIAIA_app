@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@aiaia/shared';
+import { createEventsApi } from './events';
 
 /**
  * Shared touch point. All server access goes through this package.
@@ -12,8 +13,10 @@ export type Client = SupabaseClient<Database>;
 export function createApi(client: Client) {
   return {
     // feature registrations go here
+    events: createEventsApi(client),
     _client: client,
   };
 }
 
 export type Api = ReturnType<typeof createApi>;
+export * from './events';
