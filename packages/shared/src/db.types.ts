@@ -938,6 +938,28 @@ isOneToOne: false
             "add_dependent":
 { Args: { "payload": Json }; Returns: Json
                            },
+"admin_export_members":
+{ Args: { "after"?: string,"branch_id"?: string,"page_size"?: number }; Returns: {
+              "approved_at": string,"branch_code": string,"branch_name": string,"city": string,"contacts_withheld": boolean,"dob": string,"email": string,"full_name": string,"gender": string,"has_login": boolean,"is_minor": boolean,"member_id": string,"member_no": string,"phone": string,"status": string,"wing": string
+            }[]
+                           },
+"admin_list_settings":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "description": string,"editable": boolean,"is_public": boolean,"is_secret": boolean,"key": string,"updated_at": string,"updated_by": string,"value": Json
+            }[]
+                           },
+"admin_set_member_branch":
+{ Args: { "member_id": string,"to_branch_id": string }; Returns: Json
+                           },
+"admin_set_setting":
+{ Args: { "key": string,"value": Json }; Returns: Json
+                           },
+"admin_setting_is_locked":
+{ Args: { "key": string }; Returns: boolean
+                           },
+"admin_setting_is_secret":
+{ Args: { "key": string }; Returns: boolean
+                           },
 "adult_handover_grace_days":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
