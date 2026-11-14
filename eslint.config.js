@@ -23,4 +23,10 @@ module.exports = defineConfig([
       },
     },
   },
+  {
+    // Deno Edge Functions: jsr:/npm: specifiers that Node's import resolver cannot follow.
+    // Only that one rule is off; everything else is still linted. Tested by `deno test`.
+    files: ['supabase/functions/**'],
+    rules: { 'import/no-unresolved': 'off' },
+  },
 ]);

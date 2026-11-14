@@ -371,6 +371,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"event_reminders_sent": {
+                  Row: {
+                    "event_id": string,"kind": string,"member_id": string,"sent_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "event_id": string,"kind": string,"member_id": string,"sent_at"?: string
+                  }
+                  Update: {
+                    "event_id"?: string,"kind"?: string,"member_id"?: string,"sent_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "event_reminders_sent_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_reminders_sent_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "member_cards"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_reminders_sent_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"event_staff": {
                   Row: {
                     "added_by": string | null,"capabilities": (string)[],"created_at": string,"event_id": string,"member_id": string
@@ -986,9 +1018,24 @@ isOneToOne: false
 "end_role":
 { Args: { "assignment_id": string,"ends_on"?: string }; Returns: Json
                            },
+"event_attendees":
+{ Args: { "event_id": string }; Returns: {
+              "branch_name": string,"full_name": string,"member_id": string,"member_no": string,"registered_at": string,"registered_by_guardian": boolean,"status": string
+            }[]
+                           },
 "event_pack":
 { Args: { "event_id": string }; Returns: {
               "age_group": string,"branch_name": string,"full_name": string,"guardian_names": (string)[],"member_id": string,"member_no": string,"pass_version": number,"photo_path": string
+            }[]
+                           },
+"event_spots":
+{ Args: { "event_ids": (string)[] }; Returns: {
+              "event_id": string,"going": number,"waitlisted": number
+            }[]
+                           },
+"event_team":
+{ Args: { "event_id": string }; Returns: {
+              "branch_name": string,"capabilities": (string)[],"full_name": string,"member_id": string
             }[]
                            },
 "give_adult_consent":
@@ -1027,6 +1074,11 @@ isOneToOne: false
 "my_dependents":
 { Args: Record<PropertyKey, never>; Returns: {
               "branch_id": string,"claim_code_expires_at": string,"dob": string,"full_name": string,"has_login": boolean,"member_id": string,"member_no": string,"relationship": string,"status": Database["public"]['Enums']["member_status"],"wing": string
+            }[]
+                           },
+"my_event_duties":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "capabilities": (string)[],"ends_at": string,"event_id": string,"starts_at": string,"title": string,"venue_name": string
             }[]
                            },
 "my_permissions":
@@ -1077,6 +1129,9 @@ isOneToOne: false
               "branch_name": string,"city": string,"email": string,"full_name": string,"id": string,"occupation": string,"phone": string,"photo_path": string
             }[]
                            },
+"send_event_reminders":
+{ Args: { "reminder_kind": string }; Returns: number
+                           },
 "set_event_staff":
 { Args: { "capabilities": (string)[],"event_id": string,"member_id": string }; Returns: undefined
                            },
@@ -1100,6 +1155,9 @@ isOneToOne: false
                            },
 "verify_member_id":
 { Args: { "member_id": string,"pass_version": number }; Returns: Json
+                           },
+"wake_event_reminders":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "wake_notify_dispatch":
 { Args: Record<PropertyKey, never>; Returns: undefined
