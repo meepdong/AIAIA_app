@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
 import { useRefreshMembership } from '@/lib/session';
-import { AGE_COPY } from './age';
+import { AGE_COPY, isMinorDob } from './age';
 import { clearDraft, loadDraft, saveDraft } from './draft-store';
 import {
   LAST_STEP,
@@ -33,6 +33,43 @@ export const PRIVACY_TOGGLES: { key: PrivacyKey; label: string }[] = [
   { key: 'show_occupation', label: 'Show my occupation in the directory' },
   { key: 'show_photo', label: 'Show my photo in the directory' },
 ];
+
+/** A minor's phone and email are never shown to other members, so the toggles are not offered. */
+export function privacyTogglesFor(dob: string | null | undefined) {
+  if (!isMinorDob(dob)) return PRIVACY_TOGGLES;
+  return PRIVACY_TOGGLES.filter(({ key }) => key !== 'show_phone' && key !== 'show_email');
+}
+
+/** The 10-digit India field, or a plain field when a stored number is a full +E.164 one. */
+export function EmergencyPhoneField({
+  value,
+  onChangeText,
+  error,
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  error?: string;
+}) {
+  if (value.startsWith('+')) {
+    return (
+      <TextField
+        label="Emergency contact number"
+        value={value}
+        onChangeText={(text) => onChangeText(text.replace(/[^\d+]/g, ''))}
+        keyboardType="phone-pad"
+        error={error}
+      />
+    );
+  }
+  return (
+    <PhoneField
+      label="Emergency contact number"
+      value={value}
+      onChangeText={onChangeText}
+      error={error}
+    />
+  );
+}
 
 export function ToggleRow({
   label,
@@ -231,8 +268,7 @@ export function ProfileSetupScreen({
               onChangeText={(emergencyName) => update({ emergencyName })}
               error={errors.emergencyName}
             />
-            <PhoneField
-              label="Emergency contact number"
+            <EmergencyPhoneField
               value={draft.emergencyPhone}
               onChangeText={(emergencyPhone) => update({ emergencyPhone })}
               error={errors.emergencyPhone}
@@ -275,7 +311,7 @@ export function ProfileSetupScreen({
             <Text variant="label" bold>
               Directory visibility
             </Text>
-            {PRIVACY_TOGGLES.map(({ key, label }) => (
+            {privacyTogglesFor(draft.dob).map(({ key, label }) => (
               <ToggleRow
                 key={key}
                 label={label}

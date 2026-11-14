@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
 import { homeRouteFor, useRefreshMembership } from '@/lib/session';
 import { DEFAULT_PRIVACY, type PrivacyKey } from './form';
-import { PRIVACY_TOGGLES, ToggleRow } from './ProfileSetupScreen';
+import { ToggleRow, privacyTogglesFor } from './ProfileSetupScreen';
 
 /** The 18th-birthday handover: the member reviews their settings, then accepts the account. */
 export function AdultConsentScreen() {
@@ -17,6 +17,7 @@ export function AdultConsentScreen() {
   const [whatsapp, setWhatsapp] = useState(false);
   const [emailUpdates, setEmailUpdates] = useState(false);
   const [error, setError] = useState<string>();
+  const [dob, setDob] = useState<string | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -35,6 +36,7 @@ export function AdultConsentScreen() {
       }
       const prefs = (r.profile.private?.notify_prefs ?? {}) as Record<string, unknown>;
       setPrivacy(next);
+      setDob(r.profile.private?.dob ?? null);
       setWhatsapp(prefs.whatsapp === true);
       setEmailUpdates(prefs.email_updates === true);
     });
@@ -92,7 +94,7 @@ export function AdultConsentScreen() {
               value={emailUpdates}
               onChange={setEmailUpdates}
             />
-            {PRIVACY_TOGGLES.map(({ key, label }) => (
+            {privacyTogglesFor(dob).map(({ key, label }) => (
               <ToggleRow
                 key={key}
                 label={label}

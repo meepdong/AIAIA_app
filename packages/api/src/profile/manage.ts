@@ -160,9 +160,14 @@ export function createManageMethods(client: Client) {
     /** "Request info" messages from approvers (own notifications), newest first. */
     async infoRequests(): Promise<{ ok: true; items: InfoRequest[] } | ManageFailure> {
       try {
+        // Defence in depth: RLS already limits this to the caller's own rows.
+        const me = await client.rpc('current_member_id');
+        if (me.error) return mapManageError(me.error);
+        if (typeof me.data !== 'string') return { ok: true, items: [] };
         const { data, error } = await client
           .from('notifications')
           .select('id, data, created_at')
+          .eq('member_id', me.data)
           .eq('kind', 'membership.info_requested')
           .order('created_at', { ascending: false })
           .limit(10);

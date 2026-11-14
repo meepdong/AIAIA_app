@@ -1,14 +1,25 @@
 import type { MyProfileResult } from '@aiaia/shared/src/schemas/membership';
-import { Button, PhoneField, Screen, Select, Text, TextField } from '@aiaia/ui';
+import { Button, Screen, Select, Text, TextField } from '@aiaia/ui';
 import { Link, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
 import { SignOutButton } from '@/features/auth/SignOutButton';
 import { toUpdateInput, validateEdit } from './edit';
 import { canSeeFamily } from './family';
 import { draftFromProfile, type FieldErrors, type ProfileDraft } from './form';
-import { GENDERS, PRIVACY_TOGGLES, ToggleRow } from './ProfileSetupScreen';
+import { EmergencyPhoneField, GENDERS, ToggleRow, privacyTogglesFor } from './ProfileSetupScreen';
+
+/** A link row at least 44 pt tall. */
+function TapLink({ href, label, muted }: { href: Href; label: string; muted?: boolean }) {
+  return (
+    <Link href={href} asChild>
+      <Pressable accessibilityRole="link" style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Text tone={muted ? 'textMuted' : undefined}>{label}</Text>
+      </Pressable>
+    </Link>
+  );
+}
 
 function ReadOnlyRow({ label, value }: { label: string; value: string }) {
   return (
@@ -159,8 +170,7 @@ export function MyProfileScreen() {
           onChangeText={(emergencyName) => update({ emergencyName })}
           error={errors.emergencyName}
         />
-        <PhoneField
-          label="Emergency contact number"
+        <EmergencyPhoneField
           value={draft.emergencyPhone}
           onChangeText={(emergencyPhone) => update({ emergencyPhone })}
           error={errors.emergencyPhone}
@@ -179,7 +189,7 @@ export function MyProfileScreen() {
           value={draft.emailUpdatesOptIn}
           onChange={(emailUpdatesOptIn) => update({ emailUpdatesOptIn })}
         />
-        {PRIVACY_TOGGLES.map(({ key, label }) => (
+        {privacyTogglesFor(draft.dob).map(({ key, label }) => (
           <ToggleRow
             key={key}
             label={label}
@@ -199,17 +209,9 @@ export function MyProfileScreen() {
         ) : null}
         <Button title="Save changes" onPress={save} loading={saving} fullWidth />
 
-        <Link href={'/pass' as Href} accessibilityRole="link">
-          <Text>My pass</Text>
-        </Link>
-        {canSeeFamily(data) ? (
-          <Link href={'/profile/family' as Href} accessibilityRole="link">
-            <Text>My family</Text>
-          </Link>
-        ) : null}
-        <Link href="/privacy" accessibilityRole="link">
-          <Text tone="textMuted">Privacy notice</Text>
-        </Link>
+        <TapLink href={'/pass' as Href} label="My pass" />
+        {canSeeFamily(data) ? <TapLink href={'/profile/family' as Href} label="My family" /> : null}
+        <TapLink href="/privacy" label="Privacy notice" muted />
         <SignOutButton />
       </View>
     </Screen>

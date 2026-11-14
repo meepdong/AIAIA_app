@@ -61,7 +61,11 @@ export function emptyDraft(): ProfileDraft {
 export type FieldErrors = Partial<Record<keyof ProfileDraft, string>>;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const E164 = /^\+[1-9]\d{7,14}$/;
 const MAX_TEXT = 120;
+
+/** The stored form of the emergency number: a full +E.164 number is kept, 10 digits get +91. */
+export const toE164 = (phone: string) => (phone.startsWith('+') ? phone : `+91${phone}`);
 const tooLong = (value: string) => value.trim().length > MAX_TEXT;
 
 /** The age band for the draft's DOB today in IST, or null while the DOB is incomplete. */
@@ -91,7 +95,7 @@ export function validateStep(step: number, draft: ProfileDraft, onIso?: string):
     }
     const hasName = draft.emergencyName.trim().length > 0;
     const hasPhone = draft.emergencyPhone.length > 0;
-    if (hasPhone && draft.emergencyPhone.length !== 10) {
+    if (hasPhone && !/^\d{10}$/.test(draft.emergencyPhone) && !E164.test(draft.emergencyPhone)) {
       errors.emergencyPhone = 'Enter a valid 10-digit mobile number.';
     }
     if (hasName && !hasPhone) errors.emergencyPhone = 'Add a number for this contact.';
@@ -125,7 +129,7 @@ export function toPayload(draft: ProfileDraft): SubmitApplicationPayload {
     education: blankToNull(draft.education),
     email: blankToNull(draft.email),
     emergency_contact_name: blankToNull(draft.emergencyName),
-    emergency_contact_phone: draft.emergencyPhone ? `+91${draft.emergencyPhone}` : null,
+    emergency_contact_phone: draft.emergencyPhone ? toE164(draft.emergencyPhone) : null,
     whatsapp_opt_in: draft.whatsappOptIn,
     email_updates_opt_in: draft.emailUpdatesOptIn,
     privacy: { ...draft.privacy },
@@ -194,7 +198,9 @@ export function draftFromProfile(profile: MyProfileResult): ProfileDraft {
   draft.occupation = asText(member.occupation);
   draft.education = asText(member.education);
   draft.emergencyName = asText(priv?.emergency_contact_name);
-  draft.emergencyPhone = asText(priv?.emergency_contact_phone).replace(/^\+91/, '');
+  const storedPhone = asText(priv?.emergency_contact_phone);
+  // Only an Indian number is shown as its 10 national digits; any other keeps its full +E.164.
+  draft.emergencyPhone = /^\+91\d{10}$/.test(storedPhone) ? storedPhone.slice(3) : storedPhone;
   draft.email = asText(priv?.email);
   const prefs = (priv?.notify_prefs ?? {}) as Record<string, unknown>;
   draft.whatsappOptIn = prefs.whatsapp === true;

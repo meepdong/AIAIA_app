@@ -1,5 +1,5 @@
 import type { Api } from '@aiaia/api';
-import { validateStep, type FieldErrors, type ProfileDraft } from './form';
+import { toE164, validateStep, type FieldErrors, type ProfileDraft } from './form';
 
 type UpdateProfileInput = Parameters<Api['profile']['updateProfile']>[0];
 
@@ -28,7 +28,7 @@ export function toUpdateInput(draft: ProfileDraft, memberId: string): UpdateProf
     occupation: blankToNull(draft.occupation),
     education: blankToNull(draft.education),
     emergencyContactName: blankToNull(draft.emergencyName),
-    emergencyContactPhone: draft.emergencyPhone ? `+91${draft.emergencyPhone}` : null,
+    emergencyContactPhone: draft.emergencyPhone ? toE164(draft.emergencyPhone) : null,
     whatsappOptIn: draft.whatsappOptIn,
     emailUpdatesOptIn: draft.emailUpdatesOptIn,
     privacy: { ...draft.privacy },

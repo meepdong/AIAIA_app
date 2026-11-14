@@ -48,6 +48,13 @@ export function bandForDob(dobIso: string, onIso: string = todayIst()): AgeBand 
   return ageBand(age);
 }
 
+/** True only when the date of birth is usable and the member is under 18 today (IST). */
+export function isMinorDob(dobIso: string | null | undefined, onIso: string = todayIst()): boolean {
+  if (!dobIso) return false;
+  const age = ageOn(dobIso, onIso);
+  return age !== null && age >= 0 && age < ADULT_AGE;
+}
+
 export const AGE_COPY: Record<AgeBand, string | null> = {
   blocked: 'Ask a parent or guardian to add you.',
   teen: 'Your branch will confirm a parent or guardian agrees.',

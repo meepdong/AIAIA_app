@@ -8,7 +8,7 @@ import AdultConsentRoute from '../../../app/(auth)/adult-consent';
 import BlockedRoute from '../../../app/(auth)/blocked';
 import WaitingRoomRoute from '../../../app/(auth)/waiting-room';
 import { ApiProvider } from '@/features/auth/useApi';
-import { draftFromProfile } from './form';
+import { draftFromProfile, toPayload, validateStep } from './form';
 import { mailtoFor, parseGrievance, telFor } from './BlockedScreen';
 import { WAITING_POLL_MS } from './WaitingRoomScreen';
 
@@ -121,6 +121,17 @@ describe('draftFromProfile', () => {
       whatsappOptIn: true,
       emailUpdatesOptIn: false,
     });
+  });
+});
+
+describe('draftFromProfile: emergency number', () => {
+  it('keeps a non-Indian E.164 number whole and round-trips it without a +91 prefix', () => {
+    const draft = draftFromProfile(
+      profileOf({}, { emergency_contact_phone: '+447700900123' }) as never,
+    );
+    expect(draft.emergencyPhone).toBe('+447700900123');
+    expect(validateStep(1, draft)).toEqual({});
+    expect(toPayload(draft).emergency_contact_phone).toBe('+447700900123');
   });
 });
 
@@ -257,6 +268,13 @@ describe('blocked screen', () => {
     open.mockRestore();
   });
 
+  it('says "Account unavailable", not "suspended", while the status is unknown', async () => {
+    mockProfile.myProfile.mockResolvedValue({ ok: false, kind: 'offline', message: 'Offline' });
+    await renderRouter(routes, { initialUrl: '/blocked' });
+    expect(await screen.findByText('Account unavailable')).toBeTruthy();
+    expect(screen.queryByText('Your account is suspended')).toBeNull();
+  });
+
   it('adds "Changed your mind?" only for deleted accounts', async () => {
     mockProfile.myProfile.mockResolvedValue({
       ok: true,
@@ -288,6 +306,26 @@ describe('blocked screen', () => {
 });
 
 describe('adult consent screen', () => {
+  it('hides the phone and email toggles for a member still under 18', async () => {
+    mockProfile.myProfile.mockResolvedValue({
+      ok: true,
+      profile: profileOf({ status: 'active' }, { dob: '2012-01-15' }),
+    });
+    await renderRouter(routes, { initialUrl: '/adult-consent' });
+    expect(await screen.findByLabelText('Show my city in the directory')).toBeTruthy();
+    expect(screen.queryByLabelText('Show my phone number to other members')).toBeNull();
+    expect(screen.queryByLabelText('Show my email to other members')).toBeNull();
+  });
+
+  it('shows them for an adult', async () => {
+    mockProfile.myProfile.mockResolvedValue({
+      ok: true,
+      profile: profileOf({ status: 'active' }),
+    });
+    await renderRouter(routes, { initialUrl: '/adult-consent' });
+    expect(await screen.findByLabelText('Show my phone number to other members')).toBeTruthy();
+  });
+
   it('shows the current settings and accepts with them', async () => {
     mockProfile.myProfile.mockResolvedValue({
       ok: true,

@@ -1,6 +1,6 @@
 import { Card, Screen, Text } from '@aiaia/ui';
 import { useEffect, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
 import { SignOutButton } from '@/features/auth/SignOutButton';
 
@@ -32,9 +32,13 @@ export const telFor = (phone: string | null) =>
 function LinkText({ label, url }: { label: string; url: string | null }) {
   if (!url) return <Text>{label}</Text>;
   return (
-    <Text accessibilityRole="link" tone="text" onPress={() => void Linking.openURL(url)}>
-      {label}
-    </Text>
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => void Linking.openURL(url)}
+      style={{ minHeight: 44, justifyContent: 'center' }}
+    >
+      <Text tone="text">{label}</Text>
+    </Pressable>
   );
 }
 
@@ -65,7 +69,9 @@ export function BlockedScreen() {
       ? 'Your application was not approved'
       : status === 'deleted'
         ? 'This account was deleted'
-        : 'Your account is suspended';
+        : status === 'suspended'
+          ? 'Your account is suspended'
+          : 'Account unavailable';
 
   return (
     <Screen>

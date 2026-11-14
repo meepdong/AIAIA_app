@@ -95,6 +95,7 @@ describe('manage api: myProfile', () => {
 describe('manage api: infoRequests', () => {
   it('keeps rows with a text message, newest first, and drops the rest', async () => {
     const { client, made } = fakeClient({
+      rpc: { data: M },
       tables: {
         notifications: [
           {
@@ -116,10 +117,15 @@ describe('manage api: infoRequests', () => {
       method: 'eq',
       args: ['kind', 'membership.info_requested'],
     });
+    expect(q(made, 'notifications', 0).calls).toContainEqual({
+      method: 'eq',
+      args: ['member_id', M],
+    });
   });
 
   it('maps an error to a friendly failure', async () => {
     const { client } = fakeClient({
+      rpc: { data: M },
       tables: { notifications: [{ error: pgError('XX000', 'boom internal detail') }] },
     });
     const r = await createManageMethods(client).infoRequests();

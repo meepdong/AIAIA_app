@@ -2,7 +2,7 @@ import type { InfoRequest } from '@aiaia/api';
 import type { MyProfileResult } from '@aiaia/shared/src/schemas/membership';
 import { Button, Card, Screen, Text } from '@aiaia/ui';
 import { useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
 import { SignOutButton } from '@/features/auth/SignOutButton';
@@ -32,6 +32,8 @@ export function WaitingRoomScreen() {
   const [requests, setRequests] = useState<InfoRequest[]>([]);
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Stable between polls, so the edit form does not reload its branches each time.
+  const initialDraft = useMemo(() => (data ? draftFromProfile(data) : null), [data]);
 
   const load = useCallback(async () => {
     const [mine, asked] = await Promise.all([profile.myProfile(), profile.infoRequests()]);
@@ -79,11 +81,11 @@ export function WaitingRoomScreen() {
     };
   }, [load, check]);
 
-  if (editing && data) {
+  if (editing && initialDraft) {
     return (
       <ProfileSetupScreen
         heading="Edit your application"
-        initial={draftFromProfile(data)}
+        initial={initialDraft}
         onCancel={() => setEditing(false)}
         onDone={async () => {
           setEditing(false);

@@ -138,6 +138,38 @@ describe('My profile', () => {
     expect(screen.queryByLabelText('Date of birth')).toBeNull();
   });
 
+  it('offers the phone and email toggles to an adult but not to a minor', async () => {
+    mockProfile.myProfile.mockResolvedValue({ ok: true, profile: profileOf() });
+    await renderRouter(routes, { initialUrl: '/profile' });
+    expect(await screen.findByLabelText('Show my phone number to other members')).toBeTruthy();
+    expect(screen.getByLabelText('Show my email to other members')).toBeTruthy();
+    await screen.unmount();
+
+    mockProfile.myProfile.mockResolvedValue({
+      ok: true,
+      profile: profileOf({}, { dob: '2012-01-15' }),
+    });
+    await renderRouter(routes, { initialUrl: '/profile' });
+    expect(await screen.findByLabelText('Show my city in the directory')).toBeTruthy();
+    expect(screen.queryByLabelText('Show my phone number to other members')).toBeNull();
+    expect(screen.queryByLabelText('Show my email to other members')).toBeNull();
+  });
+
+  it('saves a non-Indian emergency number unchanged, without a second prefix', async () => {
+    mockProfile.myProfile.mockResolvedValue({
+      ok: true,
+      profile: profileOf({}, { emergency_contact_phone: '+447700900123' }),
+    });
+    mockProfile.updateProfile.mockResolvedValue({ ok: true });
+    await renderRouter(routes, { initialUrl: '/profile' });
+    await fireEvent.changeText(await screen.findByLabelText('City'), 'Mumbai');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mockProfile.updateProfile).toHaveBeenCalledTimes(1));
+    expect(mockProfile.updateProfile.mock.calls[0][0]).toMatchObject({
+      emergencyContactPhone: '+447700900123',
+    });
+  });
+
   it('saves the edited fields through updateProfile with only the allowed fields', async () => {
     mockProfile.myProfile.mockResolvedValue({ ok: true, profile: profileOf() });
     mockProfile.updateProfile.mockResolvedValue({ ok: true });
