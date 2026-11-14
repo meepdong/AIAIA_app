@@ -12,6 +12,8 @@ module.exports = defineConfig([
     '**/coverage/**',
     '.worktrees/**',
     'packages/shared/src/db.types.ts',
+    // Deno code (jsr:/npm: specifiers) that Node's import resolver cannot follow; tested by `deno test`.
+    'supabase/functions/**',
   ]),
   expo,
   prettier,
