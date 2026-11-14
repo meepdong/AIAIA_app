@@ -13,7 +13,10 @@ describe('gen-pass-keys.mjs', () => {
       const original = "extra: { passPublicKey: '' }\n";
       writeFileSync(config, original);
       // A clean environment: no GIT_* variables, nothing from the developer's shell.
-      const env = { CI: '1', NODE_ENV: 'test' } as Record<string, string> & { NODE_ENV: string };
+      const env: { [k: string]: string | undefined; NODE_ENV: 'test' } = {
+        CI: '1',
+        NODE_ENV: 'test',
+      };
       if (process.env.PATH) env.PATH = process.env.PATH;
       if (process.env.SystemRoot) env.SystemRoot = process.env.SystemRoot;
       const run = spawnSync(process.execPath, [SCRIPT, '--config', config], {
