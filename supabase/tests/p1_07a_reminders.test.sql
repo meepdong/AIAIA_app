@@ -2,7 +2,7 @@
 -- notifications, and the read RPCs (event_spots, event_attendees, event_team, my_event_duties).
 -- Events e7...01-05 are branch A, audience all, created by the national president.
 begin;
-select plan(49);
+select plan(58);
 
 insert into public.events (id, scope, branch_id, audience, title, venue_name, starts_at, ends_at, capacity, status, created_by)
 values
@@ -67,6 +67,15 @@ select is(public.send_event_reminders('2h'), 3, 'an event moved inside 2 h now g
 select is(public.send_event_reminders('24h'), 0, 'and no repeat 24 h reminder');
 select is((select count(*)::int from public.audit_log where action = 'event.reminders_sent'), 4, 'each run that sent something is audited');
 
+-- A reschedule clears the ledger: the event is a new occasion and is reminded again.
+update public.events set starts_at = now() + interval '20 hours', ends_at = now() + interval '22 hours' where id = pg_temp.ev('02');
+select is(public.send_event_reminders('24h'), 1, 'an event moved into the 24 h window is reminded');
+select is(public.send_event_reminders('24h'), 0, 'and only once');
+update public.events set starts_at = now() + interval '21 hours', ends_at = now() + interval '23 hours' where id = pg_temp.ev('02');
+select is(public.send_event_reminders('24h'), 1, 'rescheduled after its reminder went out: reminded again');
+update public.events set title = 'P1-07a far away renamed' where id = pg_temp.ev('02');
+select is(public.send_event_reminders('24h'), 0, 'editing something other than the start time does not reset the ledger');
+
 -- ---------------------------------------------------------------------------
 -- Cancellation: going and waitlisted registrants are told, high priority, once
 -- ---------------------------------------------------------------------------
@@ -118,9 +127,25 @@ select tests.authenticate_as('member_b');
 select is((select count(*)::int from public.my_event_duties() where event_id = pg_temp.ev('05')), 1, 'the staff member sees the other branch''s event under "my event duties"');
 select is_empty($$ select * from public.my_event_duties() where event_id = pg_temp.ev('02') $$, 'and not events they are not staff for');
 
+select throws_ok($$ select * from public.event_spots(array(select gen_random_uuid() from generate_series(1, 201))) $$, '54000', null,
+  'more than 200 event ids is refused, not silently truncated');
+select lives_ok($$ select * from public.event_spots(array(select gen_random_uuid() from generate_series(1, 200))) $$, '200 ids is fine');
+
 select tests.clear_auth();
 select ok(exists (select 1 from cron.job where jobname = 'event-reminders-hourly' and schedule = '5 * * * *'), 'the hourly job is scheduled');
 select lives_ok($$ select public.wake_event_reminders() $$, 'waking with no URL or secret configured does not raise');
+
+-- Only https (or the local stack) ever receives the secret.
+insert into public.app_settings (key, value, description) values
+  ('event_reminders_url', '"http://example.com/functions/v1/event-reminders"'::jsonb, 'test'),
+  ('event_reminders_secret', '"test-secret"'::jsonb, 'test')
+on conflict (key) do update set value = excluded.value;
+create temp table q_before as select count(*) as n from net.http_request_queue;
+select lives_ok($$ select public.wake_event_reminders() $$, 'a non-https URL does not raise');
+select is((select count(*) from net.http_request_queue) - (select n from q_before), 0::bigint, 'nothing is queued for a non-https URL');
+update public.app_settings set value = '"https://example.com/functions/v1/event-reminders"'::jsonb where key = 'event_reminders_url';
+select public.wake_event_reminders();
+select is((select count(*) from net.http_request_queue) - (select n from q_before), 1::bigint, 'an https URL queues one request');
 
 select * from finish();
 rollback;

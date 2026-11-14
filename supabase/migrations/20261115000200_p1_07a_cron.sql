@@ -20,6 +20,24 @@ alter table public.event_reminders_sent enable row level security;
 revoke all on public.event_reminders_sent from anon, authenticated;
 grant select, insert, update, delete on public.event_reminders_sent to service_role;
 
+-- A rescheduled event is a new occasion: forget what was sent so the reminders run again.
+create function public.events_reset_reminders()
+returns trigger
+language plpgsql security definer
+set search_path = ''
+as $$
+begin
+  delete from public.event_reminders_sent r where r.event_id = new.id;
+  return null;
+end;
+$$;
+revoke execute on function public.events_reset_reminders() from public, anon, authenticated;
+
+create trigger events_reset_reminders
+  after update of starts_at on public.events
+  for each row when (old.starts_at is distinct from new.starts_at)
+  execute function public.events_reset_reminders();
+
 -- ---------------------------------------------------------------------------
 -- send_event_reminders(reminder_kind): service role only (the event-reminders function).
 -- '24h': published events starting within 24 h but not within 2 h (the 2 h reminder covers those).
@@ -192,16 +210,21 @@ create trigger rsvps_notify_promoted
 -- ---------------------------------------------------------------------------
 create function public.event_spots(event_ids uuid[])
 returns table (event_id uuid, going integer, waitlisted integer)
-language sql stable security definer
+language plpgsql stable security definer
 set search_path = ''
 as $$
+#variable_conflict use_column
+begin
+  if cardinality(event_spots.event_ids) > 200 then
+    raise exception 'event_spots takes at most 200 event ids' using errcode = '54000';
+  end if;
+  return query
   select e.id,
     count(*) filter (where r.status = 'going')::integer,
     count(*) filter (where r.status = 'waitlisted')::integer
   from public.events e
   left join public.rsvps r on r.event_id = e.id
   where e.id = any (event_spots.event_ids)
-    and cardinality(event_spots.event_ids) <= 200
     and (
       public.is_event_officer(e.id)
       or (
@@ -212,6 +235,7 @@ as $$
       )
     )
   group by e.id;
+end;
 $$;
 revoke execute on function public.event_spots(uuid[]) from public, anon;
 grant execute on function public.event_spots(uuid[]) to authenticated;
@@ -238,6 +262,9 @@ begin
   if event_attendees.event_id is null or not public.is_event_officer(event_attendees.event_id) then
     raise exception 'not allowed to see this event''s attendees' using errcode = '42501';
   end if;
+  if (select count(*) from public.rsvps x where x.event_id = event_attendees.event_id) > 5000 then
+    raise exception 'too many attendees to list (limit 5000)' using errcode = '54000';
+  end if;
   perform public.write_audit('event.attendees_read', 'events', event_attendees.event_id::text);
   return query
     select m.id, m.full_name, m.member_no, b.name, r.status, r.created_at,
@@ -246,8 +273,7 @@ begin
     join public.members m on m.id = r.member_id
     join public.branches b on b.id = m.branch_id
     where r.event_id = event_attendees.event_id
-    order by r.status, r.created_at, m.id
-    limit 5000;
+    order by r.status, r.created_at, m.id;
 end;
 $$;
 revoke execute on function public.event_attendees(uuid) from public, anon;
