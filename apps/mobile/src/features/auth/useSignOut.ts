@@ -1,6 +1,7 @@
 import type { Api } from '@aiaia/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { clearDraft } from '@/features/profile/draft-store';
 import { getPushToken } from './push-token';
 import { useApi } from './useApi';
 
@@ -15,6 +16,7 @@ export function useSignOut(): () => Promise<Awaited<ReturnType<Api['auth']['sign
   return useCallback(async () => {
     const result = await auth.signOut({ pushToken: getPushToken() });
     queryClient.clear();
+    await clearDraft();
     return result;
   }, [auth, queryClient]);
 }

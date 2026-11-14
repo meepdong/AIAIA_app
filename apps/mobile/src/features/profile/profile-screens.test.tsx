@@ -166,6 +166,7 @@ describe('profile setup screen', () => {
       dob: dob.iso,
     });
     mockProfile.submitApplication.mockResolvedValue({ ok: true, member_id: 'm1' });
+    mockRefreshMembership.mockResolvedValue('pending');
     await renderRouter(routes, { initialUrl: '/profile-setup' });
     await fireEvent.press(await screen.findByRole('button', { name: 'Submit application' }));
     expect(mockProfile.submitApplication).toHaveBeenCalledWith(
@@ -181,6 +182,22 @@ describe('profile setup screen', () => {
     expect(mockRefreshMembership).toHaveBeenCalled();
     await waitFor(() => expect(screen).toHavePathname('/waiting-room'));
     expect(screen).toHavePathname('/waiting-room');
+  });
+
+  it('stays put and says "Saved. Reconnecting…" when the refresh failed', async () => {
+    mockStore.load.mockResolvedValue({
+      ...emptyDraft(),
+      step: 3,
+      fullName: 'Aarav Testwala',
+      branchId: BRANCH,
+      dob: dobFor(20).iso,
+    });
+    mockProfile.submitApplication.mockResolvedValue({ ok: true, member_id: 'm1' });
+    mockRefreshMembership.mockResolvedValue(null);
+    await renderRouter(routes, { initialUrl: '/profile-setup' });
+    await fireEvent.press(await screen.findByRole('button', { name: 'Submit application' }));
+    expect(await screen.findByText('Saved. Reconnecting…')).toBeTruthy();
+    expect(screen).toHavePathname('/profile-setup');
   });
 
   it('shows the friendly text when a guardian link locks the date of birth', async () => {
@@ -261,9 +278,24 @@ describe('claim screen', () => {
       adultConsentRequired: false,
       guardianLinksEnded: false,
     });
+    mockRefreshMembership.mockResolvedValue('pending');
     await enter('AB3DEF9H');
     await waitFor(() => expect(screen).toHavePathname('/waiting-room'));
     expect(mockRefreshMembership).toHaveBeenCalled();
     expect(screen).toHavePathname('/waiting-room');
+  });
+
+  it('stays put and says "Saved. Reconnecting…" when the refresh failed', async () => {
+    mockProfile.graduateDependent.mockResolvedValue({
+      ok: true,
+      memberId: 'm9',
+      status: 'pending',
+      adultConsentRequired: false,
+      guardianLinksEnded: false,
+    });
+    mockRefreshMembership.mockResolvedValue(null);
+    await enter('AB3DEF9H');
+    expect(await screen.findByText('Saved. Reconnecting…')).toBeTruthy();
+    expect(screen).toHavePathname('/claim');
   });
 });

@@ -17,6 +17,7 @@ export function AdultConsentScreen() {
   const [whatsapp, setWhatsapp] = useState(false);
   const [emailUpdates, setEmailUpdates] = useState(false);
   const [error, setError] = useState<string>();
+  const [reconnecting, setReconnecting] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -57,8 +58,13 @@ export function AdultConsentScreen() {
       return;
     }
     const state = await refreshMembership();
+    if (!state) {
+      // The read failed: stay here. The session's own retry moves the user on.
+      setReconnecting(true);
+      return;
+    }
     setBusy(false);
-    router.replace(homeRouteFor(state ?? 'active') as Href);
+    router.replace(homeRouteFor(state) as Href);
   };
 
   return (
@@ -101,6 +107,7 @@ export function AdultConsentScreen() {
             {error}
           </Text>
         ) : null}
+        {reconnecting ? <Text accessibilityLiveRegion="polite">Saved. Reconnecting…</Text> : null}
         <Button title="Accept" onPress={accept} loading={busy} disabled={!privacy} fullWidth />
         <Text tone="textMuted">Download my data: coming soon.</Text>
         <Link href="/delete-account" accessibilityRole="link">

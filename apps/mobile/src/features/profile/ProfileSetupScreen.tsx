@@ -74,6 +74,7 @@ export function ProfileSetupScreen({
   const [branchError, setBranchError] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const owner = useRef<string | null>(null);
   const busy = useRef(false);
 
@@ -142,7 +143,13 @@ export function ProfileSetupScreen({
       return;
     }
     await clearDraft();
-    await refreshMembership();
+    const state = await refreshMembership();
+    if (!state) {
+      // The read failed: stay here. The session's own retry moves the user on.
+      setReconnecting(true);
+      setSubmitting(true);
+      return;
+    }
     router.replace('/waiting-room');
   };
 
@@ -277,6 +284,9 @@ export function ProfileSetupScreen({
               />
             ))}
             {ageNote && band !== 'blocked' ? <Text tone="textMuted">{ageNote}</Text> : null}
+            {reconnecting ? (
+              <Text accessibilityLiveRegion="polite">Saved. Reconnecting…</Text>
+            ) : null}
             {submitError ? (
               <Text tone="danger" accessibilityLiveRegion="polite">
                 {submitError}

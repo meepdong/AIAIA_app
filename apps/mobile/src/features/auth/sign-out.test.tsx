@@ -11,6 +11,11 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+const mockClearDraft = jest.fn();
+jest.mock('@/features/profile/draft-store', () => ({
+  clearDraft: () => mockClearDraft(),
+}));
+
 const mockSignOut = jest.fn();
 const api = { auth: { signOut: mockSignOut }, _client: {} } as unknown as Api;
 
@@ -26,6 +31,8 @@ async function renderButton(queryClient: QueryClient) {
 
 beforeEach(() => {
   mockSignOut.mockReset();
+  mockClearDraft.mockReset();
+  mockClearDraft.mockResolvedValue(undefined);
   mockSignOut.mockResolvedValue({ ok: true });
   setPushToken(undefined);
 });
@@ -51,6 +58,12 @@ describe('sign out', () => {
     await waitFor(() => expect(queryClient.getQueryData(['members', 'me'])).toBeUndefined());
     expect(mockSignOut).toHaveBeenCalledWith({ pushToken: 'ExponentPushToken[fake]' });
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it('wipes the saved profile draft (name, DOB, phone) so the next login never sees it', async () => {
+    await renderButton(new QueryClient());
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(mockClearDraft).toHaveBeenCalledTimes(1));
   });
 
   it('clears the cache even when sign-out reports a failure', async () => {

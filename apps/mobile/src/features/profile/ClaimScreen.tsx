@@ -3,7 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
-import { homeRouteFor, stateForMembership, useRefreshMembership } from '@/lib/session';
+import { homeRouteFor, useRefreshMembership } from '@/lib/session';
 
 const CODE_LENGTH = 8;
 
@@ -15,6 +15,7 @@ export function ClaimScreen() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const inFlight = useRef(false);
 
   const submit = async () => {
@@ -23,18 +24,20 @@ export function ClaimScreen() {
     setBusy(true);
     setError(undefined);
     const result = await profile.graduateDependent(code);
-    inFlight.current = false;
-    setBusy(false);
     if (!result.ok) {
+      inFlight.current = false;
+      setBusy(false);
       setError(result.message);
       return;
     }
-    const state =
-      (await refreshMembership()) ??
-      stateForMembership({
-        status: result.status,
-        adultConsentRequired: result.adultConsentRequired,
-      });
+    const state = await refreshMembership();
+    if (!state) {
+      // The read failed: stay here. The session's own retry moves the user on.
+      setReconnecting(true);
+      return;
+    }
+    inFlight.current = false;
+    setBusy(false);
     router.replace(homeRouteFor(state) as Href);
   };
 
@@ -66,6 +69,7 @@ export function ClaimScreen() {
           maxLength={CODE_LENGTH}
           editable={!busy}
         />
+        {reconnecting ? <Text accessibilityLiveRegion="polite">Saved. Reconnecting…</Text> : null}
         <Button
           title="Use this code"
           onPress={submit}

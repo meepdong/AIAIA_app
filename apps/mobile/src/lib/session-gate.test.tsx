@@ -304,4 +304,21 @@ describe('refreshMembership', () => {
     expect(state()).toBe('pending');
     expect(last).toBeNull();
   });
+
+  it('after sign-out a refresh does nothing: no my_profile call, no retry loop', async () => {
+    jest.useFakeTimers();
+    await renderWithRefresh();
+    await signIn(member('active'));
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    mockAuth.loadMembership.mockReset();
+    mockAuth.loadMembership.mockResolvedValue({ ok: false, kind: 'offline', message: 'x' });
+    last = 'unset';
+    await fireEvent.press(screen.getByRole('button', { name: 'refresh' }));
+    await act(async () => {
+      jest.advanceTimersByTime(PROFILE_RETRY_MS * 3);
+    });
+    expect(last).toBeNull();
+    expect(mockAuth.loadMembership).not.toHaveBeenCalled();
+    expect(state()).toBe('signed_out');
+  });
 });

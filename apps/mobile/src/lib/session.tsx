@@ -107,6 +107,7 @@ function useRealSessionState(): { state: SessionState; refresh: RefreshMembershi
   useEffect(() => {
     if (!auth) return;
     let disposed = false;
+    let signedIn = false; // set by onSession; a refresh with nobody signed in does nothing
     let run = 0; // a newer session event supersedes an older lookup
     let retry: ReturnType<typeof setTimeout> | undefined;
 
@@ -125,12 +126,14 @@ function useRealSessionState(): { state: SessionState; refresh: RefreshMembershi
     // An explicit re-read after the app changed the membership itself (submit, claim, approval
     // polling). A failed read changes nothing: the state stays as it was, never `active`.
     refreshRef.current = async () => {
+      if (!signedIn) return null;
       run += 1;
       clearTimeout(retry);
       return resolve(run);
     };
 
     const off = auth.onSession((session) => {
+      signedIn = Boolean(session);
       run += 1;
       clearTimeout(retry);
       if (!session) {

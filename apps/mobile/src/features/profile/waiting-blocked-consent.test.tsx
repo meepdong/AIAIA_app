@@ -2,7 +2,8 @@ import type { Api } from '@aiaia/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderRouter, screen } from 'expo-router/testing-library';
-import { Linking } from 'react-native';
+import { act } from '@testing-library/react-native';
+import { AppState, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AdultConsentRoute from '../../../app/(auth)/adult-consent';
 import BlockedRoute from '../../../app/(auth)/blocked';
@@ -10,6 +11,7 @@ import WaitingRoomRoute from '../../../app/(auth)/waiting-room';
 import { ApiProvider } from '@/features/auth/useApi';
 import { draftFromProfile } from './form';
 import { mailtoFor, parseGrievance, telFor } from './BlockedScreen';
+import { WAITING_POLL_MS } from './WaitingRoomScreen';
 
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
@@ -171,6 +173,62 @@ describe('waiting room', () => {
   });
 });
 
+describe('waiting room poll', () => {
+  let appState: jest.SpyInstance;
+  let onChange: (s: string) => void;
+  beforeEach(() => {
+    jest.useFakeTimers();
+    appState = jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+      _t: string,
+      cb: (s: string) => void,
+    ) => {
+      onChange = cb;
+      return { remove: jest.fn() };
+    }) as never);
+    mockProfile.myProfile.mockResolvedValue({ ok: true, profile: profileOf() });
+  });
+  afterEach(() => {
+    appState.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('re-reads every WAITING_POLL_MS and moves into the app once approved', async () => {
+    mockRefresh.mockResolvedValueOnce('pending').mockResolvedValue('active');
+    await renderRouter(routes, { initialUrl: '/waiting-room' });
+    expect(mockRefresh).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(WAITING_POLL_MS);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(screen).toHavePathname('/waiting-room');
+    await act(async () => {
+      jest.advanceTimersByTime(WAITING_POLL_MS);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(2);
+    expect(screen).toHavePathname('/home');
+  });
+
+  it('stops polling in the background and resumes when active again', async () => {
+    mockRefresh.mockResolvedValue('pending');
+    await renderRouter(routes, { initialUrl: '/waiting-room' });
+    await act(async () => {
+      onChange('background');
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(WAITING_POLL_MS * 3);
+    });
+    expect(mockRefresh).not.toHaveBeenCalled();
+    await act(async () => {
+      onChange('active');
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1); // an immediate check on return
+    await act(async () => {
+      jest.advanceTimersByTime(WAITING_POLL_MS);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('blocked screen', () => {
   const grievance = {
     ok: true,
@@ -255,6 +313,16 @@ describe('adult consent screen', () => {
       }),
     );
     await waitFor(() => expect(screen).toHavePathname('/home'));
+  });
+
+  it('stays put and says "Saved. Reconnecting…" when the refresh failed', async () => {
+    mockProfile.myProfile.mockResolvedValue({ ok: true, profile: profileOf({ status: 'active' }) });
+    mockProfile.giveAdultConsent.mockResolvedValue({ ok: true, member_id: 'm1' });
+    mockRefresh.mockResolvedValue(null);
+    await renderRouter(routes, { initialUrl: '/adult-consent' });
+    await fireEvent.press(await screen.findByRole('button', { name: 'Accept' }));
+    expect(await screen.findByText('Saved. Reconnecting…')).toBeTruthy();
+    expect(screen).toHavePathname('/adult-consent');
   });
 
   it('stays on the screen and shows the message when consent fails', async () => {
