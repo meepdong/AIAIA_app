@@ -19,7 +19,7 @@ import {
   type ProfileDraft,
 } from './form';
 
-const GENDERS = [
+export const GENDERS = [
   { label: 'Female', value: 'female' },
   { label: 'Male', value: 'male' },
   { label: 'Non-binary', value: 'non_binary' },
