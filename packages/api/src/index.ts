@@ -4,6 +4,7 @@ import { createAdminApi } from './admin';
 import { createAuthApi } from './auth';
 import { createDirectoryApi } from './directory';
 import { createEventsApi } from './events';
+import { createProfileApi } from './profile';
 import { createSettingsApi } from './settings';
 
 /**
@@ -22,6 +23,7 @@ export function createApi(client: Client) {
     auth: createAuthApi(client),
     directory: createDirectoryApi(client),
     events: createEventsApi(client),
+    profile: createProfileApi(client),
     settings: createSettingsApi(client),
     _client: client,
   };
