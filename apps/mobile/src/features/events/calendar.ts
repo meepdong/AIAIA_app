@@ -55,7 +55,11 @@ export function googleCalendarUrl(event: CalEvent): string {
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }
 
-/** Web downloads the .ics file. Native opens Google Calendar's add-event page (no file-sharing dependency). */
+/**
+ * Web downloads the .ics file. Native opens Google Calendar's add-event page (no file-sharing dependency).
+ * Decision: on native this shares the event's title, venue and description with Google. A true native
+ * .ics would need expo-file-system + expo-sharing.
+ */
 export async function addToCalendar(event: CalEvent): Promise<void> {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     const blob = new Blob([buildIcs(event)], { type: 'text/calendar;charset=utf-8' });

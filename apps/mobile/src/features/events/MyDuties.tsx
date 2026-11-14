@@ -1,4 +1,4 @@
-import { Header, ListItem, QueryState, Screen } from '@aiaia/ui';
+import { Button, Card, Header, QueryState, Screen, Text } from '@aiaia/ui';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { CAPABILITY_LABEL, whenText } from './helpers';
@@ -20,15 +20,19 @@ export function MyDuties() {
           {(list) => (
             <>
               {list.map((d) => (
-                <ListItem
-                  key={d.event_id}
-                  divider
-                  title={d.title}
-                  subtitle={`${whenText(d)} · ${d.capabilities
-                    .map((c) => CAPABILITY_LABEL[c] ?? c)
-                    .join(', ')}`}
-                  onPress={() => router.push(`/events/${d.event_id}` as never)}
-                />
+                <View key={d.event_id} style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+                  <Card>
+                    <Text variant="heading">{d.title}</Text>
+                    <Text tone="textMuted">{whenText(d)}</Text>
+                    {d.venue_name ? <Text tone="textMuted">{d.venue_name}</Text> : null}
+                    <Text variant="label" bold>
+                      {d.capabilities.map((c) => CAPABILITY_LABEL[c] ?? c).join(', ')}
+                    </Text>
+                    <View style={{ marginTop: 8 }}>
+                      <Button variant="secondary" title="Check-in (coming soon)" disabled />
+                    </View>
+                  </Card>
+                </View>
               ))}
             </>
           )}

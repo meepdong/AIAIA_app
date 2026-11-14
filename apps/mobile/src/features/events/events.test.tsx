@@ -7,8 +7,9 @@ import { EventsList } from './EventsList';
 import { MyDuties } from './MyDuties';
 import { registrationState, safeMapUrl, spotsLeft, spotsText } from './helpers';
 
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
 }));
 
 const EVENT = '00000000-0000-4000-8000-0000000000e1';
@@ -26,6 +27,7 @@ type World = {
 };
 
 let world: World;
+let hideEvents = false;
 const rpcCalls: [string, Record<string, unknown> | undefined][] = [];
 
 function event(over: Row = {}): Row {
@@ -65,7 +67,9 @@ function query(table: string) {
           return (res: (r: unknown) => unknown, rej: (e: unknown) => unknown) => {
             const rows: Row[] =
               table === 'events'
-                ? [event()]
+                ? hideEvents
+                  ? []
+                  : [event()]
                 : table === 'rsvps'
                   ? world.rsvps
                   : table === 'members'
@@ -270,6 +274,28 @@ describe('list and duties', () => {
     ];
     await render(wrap(<MyDuties />));
     expect(await screen.findByText(/Check-in, Safety lead/)).toBeTruthy();
+  });
+
+  it('shows duty details inline and never links to an event the caller cannot read', async () => {
+    hideEvents = true;
+    mockPush.mockClear();
+    world.duties = [
+      {
+        event_id: EVENT,
+        title: 'Other Branch Camp',
+        venue_name: 'Far Hall',
+        starts_at: '2026-12-01T04:30:00Z',
+        ends_at: '2026-12-01T08:30:00Z',
+        capabilities: ['collect_payments'],
+      },
+    ];
+    await render(wrap(<MyDuties />));
+    expect(await screen.findByText('Other Branch Camp')).toBeTruthy();
+    expect(screen.getByText('Far Hall')).toBeTruthy();
+    expect(screen.getByText('Collect payments')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Other Branch Camp'));
+    expect(mockPush).not.toHaveBeenCalled();
+    hideEvents = false;
   });
 });
 

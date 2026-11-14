@@ -15,7 +15,7 @@ export function AdminEventsList() {
   return (
     <Screen padded={false}>
       <Header title="Manage events" />
-      <View style={{ padding: 16, gap: 12 }}>
+      <View style={{ width: '100%', maxWidth: 960, alignSelf: 'center', padding: 16, gap: 12 }}>
         <Button title="New event" onPress={() => router.push(`${MANAGE_BASE}/new` as never)} />
         <QueryState
           query={events}

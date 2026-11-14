@@ -9,7 +9,7 @@ export function NewEvent() {
   return (
     <Screen padded={false}>
       <Header title="New event" onBack={() => router.back()} />
-      <View style={{ padding: 16 }}>
+      <View style={{ width: '100%', maxWidth: 960, alignSelf: 'center', padding: 16 }}>
         <EventForm
           onSaved={(saved) => router.replace(`${MANAGE_BASE}/${saved.id}` as never)}
           onCancel={() => router.back()}

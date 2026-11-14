@@ -30,7 +30,7 @@ export function AdminEventDetail({ eventId }: { eventId: string }) {
   return (
     <Screen padded={false}>
       <Header title="Manage event" onBack={() => router.back()} />
-      <View style={{ padding: 16, gap: 16 }}>
+      <View style={{ width: '100%', maxWidth: 960, alignSelf: 'center', padding: 16, gap: 16 }}>
         <QueryState
           query={event}
           isEmpty={(e) => e == null}

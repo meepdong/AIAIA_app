@@ -9,6 +9,7 @@ import {
   type EventFormErrors,
   type EventFormValues,
 } from './form';
+import { useSpots } from '../hooks';
 import { useBranches, useCreateEvent, useUpdateEvent } from './hooks';
 
 const SCOPES = [
@@ -38,6 +39,19 @@ export function EventForm({
   const create = useCreateEvent();
   const update = useUpdateEvent(event?.id ?? '');
   const saving = create.isPending || update.isPending;
+  const spots = useSpots(event ? [event.id] : []);
+  const counts = spots.data?.find((s) => s.event_id === event?.id);
+  const registered = (counts?.going ?? 0) + (counts?.waitlisted ?? 0);
+  // Scope, branch and audience decide who may see and join the event, so they are fixed once
+  // people could have registered.
+  const locked = Boolean(event) && (event?.status === 'published' || registered > 0);
+  const lockReason = 'Locked: the event is published or has registrations.';
+  const capacityNum = values.capacity.trim() === '' ? null : Number(values.capacity);
+  const capacityBelowGoing =
+    Boolean(event) &&
+    capacityNum != null &&
+    Number.isInteger(capacityNum) &&
+    capacityNum < (counts?.going ?? 0);
 
   const set = <K extends keyof EventFormValues>(key: K, value: EventFormValues[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
@@ -81,6 +95,8 @@ export function EventForm({
         options={SCOPES}
         value={values.scope}
         onChange={(s) => set('scope', s)}
+        disabled={locked}
+        hint={locked ? lockReason : undefined}
       />
       {values.scope === 'branch' ? (
         <Select
@@ -90,6 +106,8 @@ export function EventForm({
           value={values.branchId || null}
           onChange={(id) => set('branchId', id)}
           error={errors.branchId}
+          disabled={locked}
+          hint={locked ? lockReason : undefined}
         />
       ) : null}
       <Select
@@ -97,6 +115,8 @@ export function EventForm({
         options={AUDIENCES}
         value={values.audience}
         onChange={(a) => set('audience', a)}
+        disabled={locked}
+        hint={locked ? lockReason : undefined}
       />
       <TextField
         label="Starts (IST)"
@@ -143,6 +163,11 @@ export function EventForm({
         error={errors.capacity}
         keyboardType="number-pad"
       />
+      {capacityBelowGoing ? (
+        <Text tone="warning" accessibilityRole="alert">
+          {`${counts?.going ?? 0} people are already going. Lowering capacity below that will not remove anyone.`}
+        </Text>
+      ) : null}
       <TextField
         label="Registration opens (IST)"
         hint="Optional. YYYY-MM-DD HH:mm"

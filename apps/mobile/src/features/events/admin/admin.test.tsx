@@ -17,6 +17,7 @@ const BRANCH = '00000000-0000-4000-8000-0000000000b1';
 type Row = Record<string, unknown>;
 let status: string;
 let updates: Row[];
+let spotsRows: Row[] = [];
 const rpcCalls: [string, Record<string, unknown> | undefined][] = [];
 
 function eventRow(): Row {
@@ -81,9 +82,11 @@ const mockClient = {
               email: null,
             },
           ]
-        : name === 'set_event_staff'
-          ? null
-          : [];
+        : name === 'event_spots'
+          ? spotsRows
+          : name === 'set_event_staff'
+            ? null
+            : [];
     return Promise.resolve({ data, error: null });
   },
 };
@@ -106,6 +109,7 @@ function wrap(ui: React.ReactElement) {
 beforeEach(() => {
   status = 'draft';
   updates = [];
+  spotsRows = [];
   rpcCalls.length = 0;
 });
 
@@ -206,6 +210,35 @@ describe('admin event detail', () => {
     const buttons = screen.getAllByRole('button', { name: 'Cancel event' });
     await fireEvent.press(buttons[buttons.length - 1] as never);
     await waitFor(() => expect(updates).toEqual([{ status: 'cancelled' }]));
+  });
+
+  it('locks scope, branch and audience once the event is published', async () => {
+    status = 'published';
+    await render(wrap(<AdminEventDetail eventId={EVENT} />));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Edit details' }));
+    const scope = await screen.findByRole('button', { name: 'Scope, National' });
+    expect(scope.props.accessibilityState.disabled).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Audience, Everyone' }).props.accessibilityState.disabled,
+    ).toBe(true);
+    expect(screen.getAllByText(/Locked: the event is published/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps scope editable on a draft with no registrations', async () => {
+    await render(wrap(<AdminEventDetail eventId={EVENT} />));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Edit details' }));
+    const scope = await screen.findByRole('button', { name: 'Scope, National' });
+    expect(scope.props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('warns when capacity is set below the going count, without blocking', async () => {
+    spotsRows = [{ event_id: EVENT, going: 6, waitlisted: 0 }];
+    await render(wrap(<AdminEventDetail eventId={EVENT} />));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Edit details' }));
+    await fireEvent.changeText(await screen.findByLabelText('Capacity'), '3');
+    expect(await screen.findByText(/6 people are already going/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updates.length).toBe(1));
   });
 
   it('team add sends set_event_staff with the chosen duty', async () => {
