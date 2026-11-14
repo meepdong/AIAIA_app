@@ -65,13 +65,13 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P1-00a | Phase-1 tables + RLS | done | — | merged 046e0e4 (local) | 2 security rounds + minor round; 322 tests. Pulled forward into wave 0b |
 | P1-00b | Membership & roles RPCs | done | — | merged e05b60c (local) | Security review: changes required, then 3 fix rounds (claim-code rate limit and 8-character codes, helper privilege pins, no self-assigned roles, generic info-request body, DOB lock for dependents, active-guardian filters). 626 tests on the branch |
 | P1-00c | Content & operations RPCs | done | — | merged 8c4b6cd (local) | Security review: pass with minors, all 7 fixed in 1 round. At merge, `p1_00c_reports` switched from a stub to the real `block_member` (pinned). Main: 941 DB tests |
-| P1-01 | Phone OTP auth | in-progress | (real OTP: B1/B2 B3) | feat/P1-01 | Stack: default aiaia-app (543xx) |
+| P1-01 | Phone OTP auth | done | (real OTP: B1/B2 B3) | merged 0f7b986 (local) | 2 security rounds (hook JSON replies, atomic throttle RPC, verify_jwt, lock pinned); E2E with the hook on: GoTrue surfaced 502/429; web login with test number verified |
 | P1-02 | Profile, minors, guardians, waiting room | todo | — | | |
 | P1-03 | Approvals | todo | B4 | | |
-| P1-04 | Admin shell, members, roles, audit | in-progress | B4 | feat/P1-04 | Own stack aiaia-app-b (544xx) |
+| P1-04 | Admin shell, members, roles, audit | done | B4 | merged 494f63d (local) | Opus security review (upgraded: export RPC) + re-review; adds migration p1_04_admin_rpcs (branch move, audited export, settings allowlist). Export is web-only |
 | P1-05 | Directory | done | — | merged 7cb9bf6 (local) | Review PASS WITH MINORS; 1 fix round (report-limit message, load-more error, filter test). Turns `app/(app)/_layout.tsx` into Tabs. Main: 94 app tests |
 | P1-06 | Notifications, push, web push, PWA | todo | A3 | | |
-| P1-07a | Events, RSVP, reminders | in-progress | — | feat/P1-07a | Own stack aiaia-app-d (546xx) |
+| P1-07a | Events, RSVP, reminders | done | — | merged 0815a6d (local) | Review CHANGES REQUIRED (duties dead end) then 2 fix rounds; reminders cron, reschedule reset, waitlist/cancel notices. Main: db 1184, deno 23, jest 296 |
 | P1-07b | Delegate passes & offline check-in | todo | — | | |
 | P1-08 | Roster import/export | todo | — | | |
 | P1-09 | Public website & policy pages | done | (approval: C2) | merged 710841e (local) | Review PASS WITH MINORS, fixed. `[TO BE PROVIDED BY AIAIA]` placeholders in docs/legal/ await C2; flip `app_settings.legal_approved` to true when approved |
@@ -102,7 +102,7 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P3-05 | Document library | todo | D | | |
 | P3-06 | Birthday shout-outs | todo | — | | |
 
-**Next wave:** waves 0a, 0b and 1b are complete, apart from P0-03. Main is green at 8c4b6cd: lint, typecheck, `test` (76), `check:seed`, `db:reset`, `db:test` (941) and `web:build` pass. **Before the next feature wave, follow the team onboarding TODO below.** Step 2 is the secret scan (done), then a fresh root commit (it rewrites history, so it needs the owner's OK), then the first push to `github.com/meepdong/AIAIA_app`. After that, A4/A5 and P0-03 (CI and branch protection). The next feature wave is **P1-01 ∥ P1-04 ∥ P1-05 ∥ P1-07a**. The target dates are in [`06-timeline.md`](06-timeline.md).
+**Next wave:** waves 0a, 0b, 1b and 1c are complete, apart from P0-03. Main is green at 494f63d: lint, typecheck, `test` (296), `check:seed`, `db:reset`, `db:test` (1184), deno function tests (23) and `web:build` pass, and a test-number web login was checked in the browser. Next feature wave (1d): **P1-02 ∥ P1-06 ∥ P1-07b ∥ P1-08**. P0-03 still needs owner items A4/A5. The target dates are in [`06-timeline.md`](06-timeline.md).
 
 ### TODO: team onboarding (2026-11-14)
 
@@ -163,6 +163,12 @@ The team is three people: a UI dev, a backend dev and the owner (project lead, c
 - **P1-11 (from the P1-05 review):** `apps/mobile/src/features/directory/ReportMember.tsx` stands in for `<ReportButton>`. Swap its body for `<ReportButton targetType="member" targetId={memberId} />` and delete `REPORT_REASONS`.
 - **P2-04 (from the P1-05 review):** directory cards show initials because `photo_path` is private. Use signed photo URLs once media signing exists.
 - **UI polish (from the P1-05 review, low):** the app tabs have no icons yet.
+- **P1-01 follow-up (bug, found in the browser at merge):** opening a member page directly (reload or deep link to `/events`, `/directory`) lands on `/home`. While the session is `loading`, both `Stack.Protected` guards are false, so the router falls back to the index, which redirects home. Keep the splash/loading state without dropping the requested route. Needed before P1-06 notifications deep-link to an event.
+- **P1-01 (security review):** `updateUser({phone})` can still trigger one SMS to a new number before the DB trigger refuses it. Have the hook reject `phone_change` sends.
+- **P0-03 (deploy):** never `supabase config push` (local Twilio placeholder and `test_otp`). Set function secrets `SEND_SMS_HOOK_SECRET`, `OTP_THROTTLE_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `MSG91_*`, `EVENT_REMINDERS_SECRET`, plus `app_settings.event_reminders_secret`. Deploy `auth-send-otp` and `event-reminders` with `--no-verify-jwt`. Add `deno lint` for `supabase/functions`.
+- **P1-04 (security re-review, low):** an officer holding `members.manage` can still tell unknown member ids (22023) from real ones in other branches (42501). `errors.ts` has a dead "expects a json" branch, and rule texts not starting with "expects" fall back to a generic message.
+- **Later briefs (from the P1-04 review):** `email_daily_cap` is a ceiling (Workspace allows about 2,000/day), not a target. A future `min_app_version` gate must exempt the web admin console. `grievance_officer` email/phone are not format-checked: build `mailto:`/`tel:` links safely.
+- **P1-07a (review, low):** native "add to calendar" opens a Google Calendar URL (title, venue and description go to Google); web downloads `.ics`. A real native `.ics` needs `expo-file-system` + `expo-sharing`. The `event_attendees` 5000-row cap raises 54000 but is untested (too heavy for pgTAP). Deleting draft events is not built.
 - **P1-09 test gap (optional):** no test renders the real root layout signed-out at `/privacy`. Signed-out access depends on `(public)` staying outside `Stack.Protected`.
 - **P0-03 deploy checks:**
   - Confirm hosted `postgres` can SELECT `auth.sessions`; `has_step_up()` needs it.
@@ -178,6 +184,7 @@ The team is three people: a UI dev, a backend dev and the owner (project lead, c
 - **Owner question:** today a single Enforcement Committee member can suspend any super admin (except the last one) without a step-up. Should blocking a holder of a global role need `system.config` (super admin with step-up)?
 - **Owner question:** a suspended (blocked) member can delete their own account. After the 6-month purge they could re-register with the same phone. Should deletion be refused while suspended, or should blocked phones be kept on a hashed blocklist?
 - **Owner question (before P1-15):** check-in staff can record a "walk-in" arrival for any active member without scanning their signed QR. Once guardian alerts exist, that could send a false "arrived" alert. Should the server verify the QR signature, or should alerts skip unverified walk-ins? A partial guard (branch events reject out-of-branch walk-ins) is going in now.
+- **Owner question:** the guardian grace period after a dependent turns 18 can be set from 0 to 365 days (default 90) in admin Settings. Is a 365-day maximum OK?
 - **P1-14:** `verify_member_id` has no rate limit (callers are officers and support staff only, and every call is audited). Add a per-caller cap, for example 300 an hour.
 - **P1-07a:** a member promoted from the waitlist isn't notified.
 - **P1-08 or support:** dependents past the 18th-birthday grace period with no login have no way to get one; their guardian no longer has access. They need an officer or support path.
