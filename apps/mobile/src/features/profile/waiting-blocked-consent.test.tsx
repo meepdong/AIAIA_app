@@ -1,8 +1,7 @@
 import type { Api } from '@aiaia/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderRouter, screen } from 'expo-router/testing-library';
-import { act } from '@testing-library/react-native';
 import { AppState, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AdultConsentRoute from '../../../app/(auth)/adult-consent';
