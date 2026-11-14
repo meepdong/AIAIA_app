@@ -31,6 +31,12 @@ module.exports = {
       rootDir: 'apps/mobile',
       // The app's "@/" alias (see apps/mobile/tsconfig.json).
       moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+      // @shopify/flash-list (directory list) ships ESM; jest-expo's default pattern skips it.
+      transformIgnorePatterns: [
+        '/node_modules/(?!(.pnpm|@shopify|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation))',
+        '/node_modules/react-native-reanimated/plugin/',
+        '/node_modules/@react-native/babel-preset/',
+      ],
     },
   ],
 };
