@@ -8,7 +8,7 @@ import { adminNav, isAdmin, visibleNav, type AdminNavEntry } from './adminNav';
 
 jest.mock('@/lib/supabase', () => ({ getSupabase: () => ({}) }));
 
-// Entries other briefs will add (P1-03 Approvals, P1-05 Announcements, P1-12a Import), registered
+// Entries other briefs will add (P1-03 Approvals, P1-05 Announcements), registered
 // here only so the visibility rules can be tested against the full picture. P1-07a's Events entry
 // is now real (in adminNav), so it is no longer stubbed here.
 const OTHER_BRIEFS: AdminNavEntry[] = [
@@ -19,7 +19,6 @@ const OTHER_BRIEFS: AdminNavEntry[] = [
     href: '/announcements',
     anyOf: ['announcements.branch', 'announcements.national'],
   },
-  { key: 'import', label: 'Import', href: '/import', anyOf: ['roster.import'] },
 ];
 const ENTRIES = [...adminNav, ...OTHER_BRIEFS];
 const BRANCH = 'c0000000-0000-4000-8000-00000000000a';
