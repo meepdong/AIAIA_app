@@ -69,7 +69,7 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P1-02 | Profile, minors, guardians, waiting room | todo | — | | |
 | P1-03 | Approvals | todo | B4 | | |
 | P1-04 | Admin shell, members, roles, audit | in-progress | B4 | feat/P1-04 | Own stack aiaia-app-b (544xx) |
-| P1-05 | Directory | in-progress | — | feat/P1-05 | Own stack aiaia-app-c (545xx) |
+| P1-05 | Directory | done | — | merged 7cb9bf6 (local) | Review PASS WITH MINORS; 1 fix round (report-limit message, load-more error, filter test). Turns `app/(app)/_layout.tsx` into Tabs. Main: 94 app tests |
 | P1-06 | Notifications, push, web push, PWA | todo | A3 | | |
 | P1-07a | Events, RSVP, reminders | in-progress | — | feat/P1-07a | Own stack aiaia-app-d (546xx) |
 | P1-07b | Delegate passes & offline check-in | todo | — | | |
