@@ -109,7 +109,14 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     const phoneHash = await hashPhone(deps.throttleKey, phone);
     // One atomic check-and-record. Counted before sending, so a failing provider cannot be used
     // to burn through messages.
-    const take = await deps.store.take(phoneHash);
+    let take: Awaited<ReturnType<ThrottleStore['take']>>;
+    try {
+      take = await deps.store.take(phoneHash);
+    } catch {
+      // Fail closed, but still answer GoTrue in its JSON error shape.
+      console.error('auth-send-otp: throttle unavailable');
+      return errorResponse(503, 'We could not send the code. Please try again shortly.');
+    }
     const nowMs = now();
     if (!take.allowed) {
       const minutes = minutesUntil(take.retryAt.getTime(), nowMs);

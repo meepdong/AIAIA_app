@@ -275,6 +275,27 @@ Deno.test('when every provider fails the answer is 502', async () => {
   assertEquals(rows.length, 1);
 });
 
+Deno.test(
+  'when the throttle is unavailable the answer is JSON 503 and nothing is sent',
+  async () => {
+    const { handler, whatsappCalls, msg91Calls } = build({
+      store: {
+        take: () => Promise.reject(new Error('rpc down')),
+        purgeOlderThan: () => Promise.resolve(),
+      },
+    });
+    const response = await handler(await signedRequest(hookPayload()));
+    assertEquals(response.status, 200);
+    assertStringIncludes(response.headers.get('content-type') ?? '', 'application/json');
+    assertEquals((await response.json()).error.http_code, 503);
+    assertEquals(whatsappCalls.length, 0);
+    assertEquals(msg91Calls.length, 0);
+  },
+);
+
+// MAX_PER_HOUR / MAX_PER_DAY here only drive the in-memory fake; the real limits are
+// authoritative in SQL (otp_throttle_take) and pinned by supabase/tests/p1_01_otp_throttle.test.sql.
+
 Deno.test('old throttle rows are purged opportunistically', async () => {
   const lucky = build({ random: () => 0 });
   await lucky.handler(await signedRequest(hookPayload()));

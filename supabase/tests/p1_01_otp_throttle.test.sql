@@ -6,7 +6,7 @@
 --   p101throttle_day_....  the day limit, with seeded past sends
 --   p101throttle_other...  a different number, unaffected
 begin;
-select plan(25);
+select plan(26);
 
 create temp table h (name text primary key, hash text not null);
 insert into h values
@@ -24,6 +24,13 @@ $$;
 
 -- Hour limit: five allowed, each recording exactly one row; the sixth refused, recording none.
 select is(pg_temp.take('hour'), '{"allowed": true}'::jsonb, '1st send in the hour is allowed');
+-- The per-number advisory lock (what makes check-and-record atomic) is held until the transaction ends.
+select ok(exists(
+  select 1 from pg_locks l
+   where l.locktype = 'advisory' and l.pid = pg_backend_pid() and l.granted and l.objsubid = 1
+     and ((l.classid::bigint << 32) | l.objid::bigint)
+         = hashtextextended('otp_throttle:' || (select hash from h where name = 'hour'), 0)),
+  'otp_throttle_take holds the per-number advisory lock until the transaction ends');
 select is(pg_temp.sent('hour'), 1, '1st allowed send records one row');
 select is(pg_temp.take('hour'), '{"allowed": true}'::jsonb, '2nd send in the hour is allowed');
 select is(pg_temp.sent('hour'), 2, '2nd allowed send records one row');
