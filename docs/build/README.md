@@ -109,11 +109,11 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 The team is three people: a UI dev, a backend dev and the owner (project lead, coordinating). The goal is that whatever the devs pull from GitHub is workable, and they build on these rules and foundations instead of starting from scratch. Do these in order:
 
 1. ☑ **Finish wave 1b first** (done 2026-11-14, merged e05b60c and 8c4b6cd). Merge P1-00b and P1-00c. Their RPC signatures and `packages/shared` types are the contract both devs build on.
-2. ☐ **Fresh history, then GitHub.**
+2. ◐ **Fresh history, then GitHub.** The secret scan, the fresh root commit (`712e9bc`) and the first push to `github.com/meepdong/AIAIA_app` were done on 2026-11-14. Still open: A4, A5 and P0-03.
    - Scan for secrets.
    - Make a single fresh root commit, and keep the old history as a local `archive/pre-github` branch.
    - Rebase any open branches onto it, and update the commit references in this README.
-   - Owner items A3 (repo and org), then A4 and A5. **The repo exists (2026-11-14):** `github.com/meepdong/AIAIA_app`, public and still empty. It is the local remote `origin`. Nothing gets pushed until this step is done.
+   - Owner items A3 (repo and org), then A4 and A5. **The repo is live (2026-11-14):** `github.com/meepdong/AIAIA_app` is public, and `main` was pushed as the single root commit `712e9bc`. Until P0-03 adds branch protection, the owner pushes `main` (agents may not run `git push`).
    - **Secret scan, done 2026-11-14:** all branches and the full history (58 commits on main). No keys, tokens, JWTs, private keys or env files were found, and no data files are tracked. Every phone number is a `+91 90000 000xx` fixture, apart from one placeholder example in the P1-14 import gate. Every email is a fake (`example.test`/`example.com`) or a tooling default. **Author email (owner, 2026-11-14):** use the GitHub noreply address. It's set as the repo-local `user.email`, so every worktree uses it. The fresh root commit replaces the older commits, which carry the owner's personal email.
    - Then P0-03: CI and branch protection (PR + `ci` check + 1 approval, no force-push).
    - From then on, everything lands through PRs with green CI. No more local merges, by agents or anyone else.
@@ -145,7 +145,7 @@ The team is three people: a UI dev, a backend dev and the owner (project lead, c
 
 **Phase 0 security audit** (skill §6.2): run it over the whole Phase 0 range once P0-03 to P0-05 are merged.
 
-**Follow-ups.** There's no GitHub remote yet, so these are listed here instead of filed as issues. Hand each to the brief named:
+**Follow-ups.** These were listed here before the repo existed. Move them to GitHub issues once P0-03 sets up labels. Hand each to the brief named:
 - **P1-00c:** `members_select_active` lets every active member read `status_reason`/`approved_by`, and the `members.privacy` flags aren't enforced on profile columns. Use column masking or a view.
 - **The brief that adds `daily_age_transitions` / `app_settings`:**
   - `is_guardian_of` has no age check; it relies on the nightly job.
