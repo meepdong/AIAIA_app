@@ -15,6 +15,34 @@ export type EventDependent = Fns['my_dependents']['Returns'][number];
 export type EventAttendee = Fns['event_attendees']['Returns'][number];
 export type EventTeamMember = Fns['event_team']['Returns'][number];
 
+export type EventAudience = Database['public']['Enums']['audience'];
+
+/** The fields an officer sets on an event. `created_by` is added by `createEvent`. */
+export type EventInput = {
+  scope: 'national' | 'branch';
+  /** Required for `branch`, must be null for `national` (a table check). */
+  branch_id: string | null;
+  audience: EventAudience;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string;
+  venue_name: string | null;
+  venue_address: string | null;
+  /** The table allows only https links. */
+  map_url: string | null;
+  capacity: number | null;
+  registration_opens_at: string | null;
+  registration_closes_at: string | null;
+};
+
+/** What an update may carry: any input field plus the lifecycle status. */
+export type EventPatch = Partial<EventInput> & { status?: 'draft' | 'published' | 'cancelled' };
+
+/** A member found by `searchMembers`. Contact details are dropped on purpose. */
+export type MemberHit = { id: string; full_name: string; branch_name: string };
+export type BranchOption = { id: string; name: string };
+
 export type EventCapability = 'check_in' | 'collect_payments' | 'safety_lead';
 
 export type ListEventsOptions = {
@@ -124,6 +152,54 @@ export function createEventsApi(client: Client) {
           capabilities,
         }),
       );
+    },
+
+    /** Officers: every event their role can see, drafts included (RLS narrows it), newest first. */
+    async listAdminEvents(limit = 100): Promise<EventRow[]> {
+      return unwrap(
+        await client
+          .from('events')
+          .select('*')
+          .order('starts_at', { ascending: false })
+          .limit(limit),
+      );
+    },
+
+    /** `created_by` is set to the caller, as the insert policy requires. Starts as a draft. */
+    async createEvent(input: EventInput): Promise<EventRow> {
+      const me = unwrap(await client.rpc('current_member_id'));
+      if (!me) throw new Error('Sign in to create an event');
+      return unwrap(
+        await client
+          .from('events')
+          .insert({ ...input, status: 'draft', created_by: me })
+          .select('*')
+          .single(),
+      );
+    },
+
+    /**
+     * Edits and lifecycle changes (`published`, `cancelled`). A row the caller cannot update comes
+     * back empty, which `single()` reports as an error.
+     */
+    async updateEvent(id: string, patch: EventPatch): Promise<EventRow> {
+      return unwrap(await client.from('events').update(patch).eq('id', id).select('*').single());
+    },
+
+    async listBranches(): Promise<BranchOption[]> {
+      return unwrap(await client.from('branches').select('id, name').order('name'));
+    },
+
+    /** Member picker: `search_directory`, reduced to id, name and branch. */
+    async searchMembers(q: string, branchId?: string | null, page = 1): Promise<MemberHit[]> {
+      const rows = unwrap(
+        await client.rpc('search_directory', {
+          q,
+          ...(branchId ? { branch_id: branchId } : {}),
+          page,
+        }),
+      );
+      return rows.map((r) => ({ id: r.id, full_name: r.full_name, branch_name: r.branch_name }));
     },
 
     async removeStaff(eventId: string, memberId: string): Promise<boolean> {

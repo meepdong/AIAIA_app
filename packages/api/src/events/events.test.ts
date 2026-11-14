@@ -156,4 +156,79 @@ describe('createEventsApi', () => {
       capabilities: ['check_in'],
     });
   });
+  const INPUT = {
+    scope: 'national' as const,
+    branch_id: null,
+    audience: 'youth' as const,
+    title: 'Demo Meetup',
+    description: null,
+    starts_at: '2026-12-01T10:00:00.000Z',
+    ends_at: '2026-12-01T12:00:00.000Z',
+    venue_name: null,
+    venue_address: null,
+    map_url: null,
+    capacity: 20,
+    registration_opens_at: null,
+    registration_closes_at: null,
+  };
+
+  it('createEvent inserts a draft owned by the caller', async () => {
+    const { client, calls } = fakeClient({
+      rpc: { current_member_id: { data: ME, error: null } },
+      from: { events: { data: { id: EVENT }, error: null } },
+    });
+    expect(await createEventsApi(client).createEvent(INPUT)).toEqual({ id: EVENT });
+    expect(calls).toContainEqual(['insert', [{ ...INPUT, status: 'draft', created_by: ME }]]);
+  });
+
+  it('createEvent refuses when signed out', async () => {
+    const { client } = fakeClient({ rpc: { current_member_id: { data: null, error: null } } });
+    await expect(createEventsApi(client).createEvent(INPUT)).rejects.toThrow('Sign in');
+  });
+
+  it('updateEvent sends the patch for one event', async () => {
+    const { client, calls } = fakeClient({
+      from: { events: { data: { id: EVENT }, error: null } },
+    });
+    await createEventsApi(client).updateEvent(EVENT, { status: 'cancelled' });
+    expect(calls).toContainEqual(['update', [{ status: 'cancelled' }]]);
+    expect(calls).toContainEqual(['eq', ['id', EVENT]]);
+  });
+
+  it('updateEvent surfaces a refused write', async () => {
+    const { client } = fakeClient({
+      from: { events: { data: null, error: { message: 'no rows' } } },
+    });
+    await expect(createEventsApi(client).updateEvent(EVENT, { title: 'x' })).rejects.toThrow(
+      'no rows',
+    );
+  });
+
+  it('searchMembers keeps only id, name and branch', async () => {
+    const { client, rpc } = fakeClient({
+      rpc: {
+        search_directory: {
+          data: [
+            {
+              id: KID,
+              full_name: 'Kabir Placeholder',
+              branch_name: 'Demo Branch',
+              phone: '+91 90000 00001',
+              email: 'x@example.test',
+            },
+          ],
+          error: null,
+        },
+      },
+    });
+    const hits = await createEventsApi(client).searchMembers('kab', null, 2);
+    expect(hits).toEqual([{ id: KID, full_name: 'Kabir Placeholder', branch_name: 'Demo Branch' }]);
+    expect(rpc).toHaveBeenCalledWith('search_directory', { q: 'kab', page: 2 });
+    await createEventsApi(client).searchMembers('kab', EVENT);
+    expect(rpc).toHaveBeenLastCalledWith('search_directory', {
+      q: 'kab',
+      branch_id: EVENT,
+      page: 1,
+    });
+  });
 });
