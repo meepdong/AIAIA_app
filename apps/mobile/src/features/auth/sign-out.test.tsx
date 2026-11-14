@@ -5,6 +5,11 @@ import { SignOutButton } from './SignOutButton';
 import { getPushToken, setPushToken } from './push-token';
 import { ApiProvider } from './useApi';
 
+// useSignOut clears the saved delegate passes, which loads the native storage wrapper.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
     throw new Error('features must go through useApi, not the Supabase client');

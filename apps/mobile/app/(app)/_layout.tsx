@@ -8,6 +8,7 @@ export default function MemberLayout() {
       <Tabs.Screen name="events/index" options={{ title: 'Events' }} />
       <Tabs.Screen name="events/[id]" options={{ href: null }} />
       <Tabs.Screen name="events/duties" options={{ href: null }} />
+      <Tabs.Screen name="pass/index" options={{ href: null }} />
       <Tabs.Screen name="_dev/ui-gallery" options={{ href: null }} />
     </Tabs>
   );
