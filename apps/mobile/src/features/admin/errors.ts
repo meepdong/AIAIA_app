@@ -42,9 +42,6 @@ export function friendlyAdminError(error: unknown): string {
   if (msg.includes('ends_on cannot be before')) return 'The end date cannot be before yesterday.';
 
   // Settings.
-  if (msg.includes('secret settings cannot be changed')) {
-    return 'Secret settings cannot be changed here.';
-  }
   if (msg.includes('this setting cannot be changed here')) {
     return 'This setting is locked and cannot be changed here.';
   }
@@ -52,6 +49,8 @@ export function friendlyAdminError(error: unknown): string {
   if (msg.includes('limited to 10000'))
     return 'That value is too long (at most 10,000 characters).';
   if (msg.includes('expects a json')) return 'That value is the wrong type for this setting.';
+  const rule = /^admin_set_setting: [a-z0-9_]+ (expects [^\n]{1,200})$/.exec(e.message ?? '');
+  if (e.code === '22023' && rule?.[1]) return `This value ${rule[1]}.`;
   if (msg.includes('system.config is required')) {
     return 'You do not have permission to change settings.';
   }

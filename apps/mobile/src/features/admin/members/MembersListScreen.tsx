@@ -1,7 +1,7 @@
 import { Badge, Button, ListItem, QueryState, Select, Text, TextField, toast } from '@aiaia/ui';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useAdminApi } from '../AdminApiContext';
 import { exportScope, holdsAnywhere } from '../permissions';
 import { useAdminGrants } from '../useAdminGrants';
@@ -66,6 +66,13 @@ export function MembersListScreen({ onOpenMember, initialStatus, pageSize }: Pro
 
   const canExport = holdsAnywhere(grants, 'data.export');
   const scope = exportScope(grants, filters.branchId);
+  const scopeBranch =
+    scope.kind === 'ok' && scope.branchId
+      ? ((branches.data ?? []).find((b) => b.id === scope.branchId)?.name ?? 'this branch')
+      : null;
+  const exportLabel = scopeBranch
+    ? `Export all members of ${scopeBranch} (CSV)`
+    : 'Export all members (CSV)';
   const exporter = useMutation({
     mutationFn: async () => {
       if (scope.kind !== 'ok') throw new Error('no export scope');
@@ -120,15 +127,23 @@ export function MembersListScreen({ onOpenMember, initialStatus, pageSize }: Pro
         onChange={(v) => apply(() => setWing(v))}
       />
 
-      {canExport ? (
+      {canExport && Platform.OS !== 'web' ? (
+        <Text tone="textMuted" variant="caption">
+          Export is available on the web admin console.
+        </Text>
+      ) : null}
+      {canExport && Platform.OS === 'web' ? (
         <View style={{ gap: 4 }}>
           <Button
-            title="Export CSV"
+            title={exportLabel}
             variant="secondary"
             loading={exporter.isPending}
             disabled={scope.kind !== 'ok'}
             onPress={() => exporter.mutate()}
           />
+          <Text tone="textMuted" variant="caption">
+            Exports every member in this scope; the filters above are not applied.
+          </Text>
           {scope.kind === 'pick_branch' ? (
             <Text tone="textMuted" variant="caption">
               Choose a branch to export.

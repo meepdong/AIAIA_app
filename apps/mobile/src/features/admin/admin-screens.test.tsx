@@ -2,6 +2,7 @@ import type { AdminApi, ExportRow } from '@aiaia/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AdminApiProvider } from './AdminApiContext';
 import { DashboardScreen } from './dashboard/DashboardScreen';
@@ -49,6 +50,11 @@ const DASH = {
   openReports: null as number | null,
   upcomingEvents: [],
 };
+
+const setPlatform = (os: string) => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os });
+};
+afterEach(() => setPlatform('ios'));
 
 describe('admin dashboard', () => {
   it('does not ask for or show open reports without reports.review', async () => {
@@ -117,7 +123,8 @@ describe('admin members list', () => {
     expect(screen.getByText('Page 2 of 3')).toBeTruthy();
   });
 
-  it('shows Export CSV only to data.export holders', async () => {
+  it('shows the export only to data.export holders', async () => {
+    setPlatform('web');
     const base = {
       listMembers: () => Promise.resolve({ rows: [row(1)], total: 1, page: 0, pageSize: 25 }),
       listBranches: () => Promise.resolve([]),
@@ -127,17 +134,18 @@ describe('admin members list', () => {
       <MembersListScreen onOpenMember={() => undefined} />,
     );
     await screen.findByText('Fake Member 1');
-    expect(screen.queryByText('Export CSV')).toBeNull();
+    expect(screen.queryByText('Export all members (CSV)')).toBeNull();
     await without.unmount();
 
     await renderWith(
       { ...base, getAccess: access(grants(['members.manage', 'data.export'])) },
       <MembersListScreen onOpenMember={() => undefined} />,
     );
-    await screen.findByText('Export CSV');
+    await screen.findByText('Export all members (CSV)');
   });
 
   it('exports through the api and hands the CSV to the delivery step', async () => {
+    setPlatform('web');
     const exportMembers = jest.fn(() =>
       Promise.resolve([
         {
@@ -158,10 +166,43 @@ describe('admin members list', () => {
       },
       <MembersListScreen onOpenMember={() => undefined} />,
     );
-    await fireEvent.press(await screen.findByText('Export CSV'));
+    await fireEvent.press(await screen.findByText('Export all members (CSV)'));
     await waitFor(() => expect(mockDeliver).toHaveBeenCalled());
     expect(exportMembers).toHaveBeenCalledWith({ branchId: null });
     expect(String((mockDeliver.mock.calls[0] as unknown[])[1])).toContain('Fake Member 1');
+  });
+  it('hides the export on native and says where it lives', async () => {
+    setPlatform('ios');
+    await renderWith(
+      {
+        getAccess: access(grants(['members.manage', 'data.export'])),
+        listMembers: () => Promise.resolve({ rows: [row(1)], total: 1, page: 0, pageSize: 25 }),
+        listBranches: () => Promise.resolve([]),
+      },
+      <MembersListScreen onOpenMember={() => undefined} />,
+    );
+    await screen.findByText('Fake Member 1');
+    expect(screen.queryByText(/Export all members/)).toBeNull();
+    expect(screen.getByText('Export is available on the web admin console.')).toBeTruthy();
+  });
+
+  it('labels a branch-scoped export with the branch name and explains the scope', async () => {
+    setPlatform('web');
+    await renderWith(
+      {
+        getAccess: access(grants(['members.manage', 'data.export'], BRANCH_A)),
+        listMembers: () => Promise.resolve({ rows: [row(1)], total: 1, page: 0, pageSize: 25 }),
+        listBranches: () =>
+          Promise.resolve([{ id: BRANCH_A, name: 'Branch A' }] as unknown as Awaited<
+            ReturnType<AdminApi['listBranches']>
+          >),
+      },
+      <MembersListScreen onOpenMember={() => undefined} />,
+    );
+    await screen.findByText('Export all members of Branch A (CSV)');
+    expect(
+      screen.getByText('Exports every member in this scope; the filters above are not applied.'),
+    ).toBeTruthy();
   });
 });
 

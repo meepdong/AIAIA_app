@@ -256,7 +256,6 @@ describe('admin settings screen', () => {
     is_public: false,
     description: 'A fake setting.',
     updated_at: '2026-11-14T10:00:00Z',
-    updated_by: OTHER,
     is_secret: false,
     editable: true,
     ...over,
@@ -286,7 +285,7 @@ describe('admin settings screen', () => {
     await screen.findByText('notify_dispatch_url');
     expect(screen.getByText('https://example.test/x')).toBeTruthy();
     expect(screen.queryByLabelText('Edit notify_dispatch_url')).toBeNull();
-    expect(screen.getByText(/Locked\. Only the operations team/)).toBeTruthy();
+    expect(screen.getByText(/This setting can't be changed from the app/)).toBeTruthy();
   });
 
   it('saves a boolean as a JSON boolean', async () => {
@@ -350,7 +349,12 @@ describe('friendlyAdminError for roles and settings', () => {
     ['23514', 'end_role: the last super admin cannot be removed', /last super admin/],
     ['22023', 'admin_set_setting: value is limited to 10000 characters', /too long/],
     ['22023', 'admin_set_setting: club_name expects a JSON string', /wrong type/],
-    ['42501', 'admin_set_setting: secret settings cannot be changed here', /Secret settings/],
+    ['42501', 'admin_set_setting: this setting cannot be changed here', /locked/],
+    [
+      '22023',
+      'admin_set_setting: adult_handover_grace_days expects a whole number from 0 to 365',
+      /^This value expects a whole number from 0 to 365.$/,
+    ],
     [
       '23514',
       'new row for relation "app_settings" violates check constraint "app_settings_step_up_roles_keeps_super_admin"',

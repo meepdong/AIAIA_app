@@ -23,7 +23,7 @@ function kindOf(value: Json): Kind {
 /** Why a row cannot be edited here, or null when it can. */
 export function readOnlyReason(s: Pick<SettingRow, 'is_secret' | 'editable'>): string | null {
   if (s.is_secret) return 'Secret value. It is never shown or changed from this screen.';
-  if (!s.editable) return 'Locked. Only the operations team can change this setting.';
+  if (!s.editable) return "This setting can't be changed from the app.";
   return null;
 }
 
