@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@aiaia/shared';
 import { createAdminApi } from './admin';
 import { createAuthApi } from './auth';
+import { createCheckinApi } from './checkin';
 import { createDirectoryApi } from './directory';
 import { createEventsApi } from './events';
 import { createSettingsApi } from './settings';
@@ -20,6 +21,7 @@ export function createApi(client: Client) {
     // feature registrations go here
     admin: createAdminApi(client),
     auth: createAuthApi(client),
+    checkin: createCheckinApi(client),
     directory: createDirectoryApi(client),
     events: createEventsApi(client),
     settings: createSettingsApi(client),
@@ -30,3 +32,4 @@ export function createApi(client: Client) {
 export type Api = ReturnType<typeof createApi>;
 export * from './events';
 export * from './admin';
+export * from './checkin';

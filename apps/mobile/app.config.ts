@@ -41,6 +41,11 @@ const config: ExpoConfig = {
     bundler: 'metro',
     favicon: './assets/images/favicon.png',
   },
+  extra: {
+    // Ed25519 public key (base64url) that verifies delegate passes offline. Set by
+    // `node scripts/gen-pass-keys.mjs`; empty means scanners refuse every pass (fail closed).
+    passPublicKey: '',
+  },
   plugins: [
     'expo-router',
     'expo-secure-store',
