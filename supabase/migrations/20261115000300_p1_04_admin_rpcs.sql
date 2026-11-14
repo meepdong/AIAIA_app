@@ -15,6 +15,10 @@
 -- the member's branch-scoped roles in the old branch end yesterday (IST) or are withdrawn if they
 -- start today or later, any pending transfer request is cancelled, and the member (or, for a
 -- dependent, their guardians) is notified. Rejected and deleted members cannot be moved.
+-- The caller must hold members.manage somewhere before the member is even looked up, so an
+-- unauthorised caller cannot tell a real member id from an unknown one. Ending the member's
+-- old-branch roles needs roles.assign for that branch, as end_role would; without it the call is
+-- refused and those roles must be ended first.
 create function public.admin_set_member_branch(member_id uuid, to_branch_id uuid)
 returns jsonb
 language plpgsql volatile security definer
@@ -31,6 +35,10 @@ declare
 begin
   if me is null then
     raise exception 'admin_set_member_branch: sign in required' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.my_permissions() p where p.permission_key = 'members.manage') then
+    raise exception 'admin_set_member_branch: members.manage for the current branch and members.approve for the new branch are required'
+      using errcode = '42501';
   end if;
   if admin_set_member_branch.member_id is null or admin_set_member_branch.to_branch_id is null then
     raise exception 'admin_set_member_branch: member_id and to_branch_id are required' using errcode = '22023';
@@ -57,6 +65,15 @@ begin
   end if;
   if m.status not in ('active', 'pending', 'suspended') then
     raise exception 'admin_set_member_branch: a % member cannot be moved', m.status using errcode = '23514';
+  end if;
+  if not public.has_permission('roles.assign', m.branch_id) and exists (
+    select 1 from public.role_assignments ra
+    join public.roles r on r.key = ra.role_key
+    where ra.member_id = m.id and r.scope = 'branch' and ra.branch_id = m.branch_id
+      and (ra.ends_on is null or ra.ends_on >= today)
+  ) then
+    raise exception 'admin_set_member_branch: the member holds roles in their current branch; end their branch roles first'
+      using errcode = '42501';
   end if;
 
   update public.members mm set branch_id = admin_set_member_branch.to_branch_id where mm.id = m.id;

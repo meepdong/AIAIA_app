@@ -1,8 +1,9 @@
 -- P1-04 chunk 2: admin_export_members, admin_list_settings / admin_set_setting, admin_set_member_branch.
--- Fixtures: supabase/seeds/p0-02.sql. Added here: a deleted member (…071), two test-only branch
--- roles carrying data.export (one with members.approve, one without), notify_dispatch_secret.
+-- Fixtures: supabase/seeds/p0-02.sql. Added here: a deleted member (…071), a branch A member with
+-- no member_private row and so no DOB on record (…072), two test-only branch roles carrying
+-- data.export (one with members.approve, one without), notify_dispatch_secret.
 begin;
-select plan(88);
+select plan(102);
 
 create temp table t_ids (k text primary key, v uuid);
 grant all on t_ids to authenticated;
@@ -19,11 +20,31 @@ insert into public.role_assignments (member_id, role_key, branch_id, starts_on) 
 
 insert into public.members (id, user_id, full_name, branch_id, wing, status)
 values ('a0000000-0000-4000-8000-000000000071', null, 'Priya Demokar', tests.branch_id('A'), 'youth', 'deleted');
+insert into public.members (id, user_id, full_name, branch_id, wing, status)
+values ('a0000000-0000-4000-8000-000000000072', null, 'Tara Mockford', tests.branch_id('A'), 'youth', 'active');
 
 insert into public.app_settings (key, value, is_public, description)
 values ('notify_dispatch_secret', '"test-dispatch-secret"'::jsonb, false, 'test')
 on conflict (key) do update set value = excluded.value;
 create temp table t_url as select value from public.app_settings where key = 'notify_dispatch_url';
+
+-- ===== execute privileges (independent of the in-body checks) ===============
+select ok(not has_function_privilege('anon', 'public.admin_set_member_branch(uuid, uuid)', 'execute'),
+  'anon cannot execute admin_set_member_branch');
+select ok(not has_function_privilege('anon', 'public.admin_export_members(uuid, integer, uuid)', 'execute'),
+  'anon cannot execute admin_export_members');
+select ok(not has_function_privilege('anon', 'public.admin_list_settings()', 'execute'),
+  'anon cannot execute admin_list_settings');
+select ok(not has_function_privilege('anon', 'public.admin_set_setting(text, jsonb)', 'execute'),
+  'anon cannot execute admin_set_setting');
+select ok(not has_function_privilege('anon', 'public.admin_setting_is_secret(text)', 'execute'),
+  'anon cannot execute admin_setting_is_secret');
+select ok(not has_function_privilege('authenticated', 'public.admin_setting_is_secret(text)', 'execute'),
+  'authenticated cannot execute admin_setting_is_secret');
+select ok(not has_function_privilege('anon', 'public.admin_setting_is_locked(text)', 'execute'),
+  'anon cannot execute admin_setting_is_locked');
+select ok(not has_function_privilege('authenticated', 'public.admin_setting_is_locked(text)', 'execute'),
+  'authenticated cannot execute admin_setting_is_locked');
 
 -- ===== admin_export_members: refused ======================================
 select tests.as_anon();
@@ -65,6 +86,9 @@ select ok((select is_minor and contacts_withheld from public.admin_export_member
   'branch exporter: a dependent minor is withheld too');
 select is_empty($$ select 1 from public.admin_export_members(tests.branch_id('A')) where branch_code <> (select code from public.branches where id = tests.branch_id('A')) $$,
   'branch exporter: only the branch asked for is exported');
+select is((select is_minor is true and contacts_withheld is true and phone is null and email is null and dob is null
+           from public.admin_export_members(tests.branch_id('A')) where member_id = 'a0000000-0000-4000-8000-000000000072'),
+  true, 'branch exporter: a member with no DOB on record counts as a minor and is withheld');
 select tests.authenticate_as('support_staff');
 select ok((select bool_and(contacts_withheld and phone is null and email is null and dob is null) and count(*) > 0
            from public.admin_export_members(tests.branch_id('B'))),
@@ -131,9 +155,13 @@ select throws_ok($$ select public.admin_set_member_branch('a0000000-0000-4000-80
 select tests.authenticate_as('pending');
 select throws_ok($$ select public.admin_set_member_branch(tests.member_id('member_a'), tests.branch_id('B')) $$, '42501', null,
   'set branch: a pending user is refused');
+select throws_ok($$ select public.admin_set_member_branch('a0000000-0000-4000-8000-0000000000ff', tests.branch_id('B')) $$, '42501', null,
+  'set branch: a pending user gets the same refusal for an unknown member id');
 select tests.authenticate_as('member_a');
 select throws_ok($$ select public.admin_set_member_branch(tests.member_id('member_b'), tests.branch_id('A')) $$, '42501', null,
   'set branch: an ordinary member is refused');
+select throws_ok($$ select public.admin_set_member_branch('a0000000-0000-4000-8000-0000000000ff', tests.branch_id('A')) $$, '42501', null,
+  'set branch: an ordinary member gets the same refusal for an unknown member id');
 select tests.authenticate_as('guardian');
 select throws_ok($$ select public.admin_set_member_branch(tests.member_id('dependent_9'), tests.branch_id('B')) $$, '42501', null,
   'set branch: a guardian with an active link is refused');
@@ -215,6 +243,15 @@ values (tests.member_id('bp_b'), 'branch_secretary', tests.branch_id('A'), (now(
 select tests.authenticate_as('bp_b');
 select lives_ok($$ select public.admin_set_member_branch(tests.member_id('suspended'), tests.branch_id('B')) $$,
   'set branch: members.manage on the old branch plus members.approve on the new one moves a suspended member');
+select isnt_empty($$ select 1 from public.members where id = tests.member_id('bp_a') $$,
+  'precondition: the branch-scoped officer can see the branch A president');
+select throws_ok($$ select public.admin_set_member_branch(tests.member_id('bp_a'), tests.branch_id('B')) $$, '42501', null,
+  'set branch: without roles.assign, a member holding branch roles is refused');
+select tests.clear_auth();
+select ok((select branch_id = tests.branch_id('A') from public.members where id = tests.member_id('bp_a'))
+          and exists (select 1 from public.role_assignments where member_id = tests.member_id('bp_a')
+                        and role_key = 'branch_president' and branch_id = tests.branch_id('A') and ends_on is null),
+  'the refused move left the president''s branch and branch_president role unchanged');
 select tests.authenticate_as('mentor');
 select lives_ok($$ select public.admin_set_member_branch(tests.member_id('member_b'), tests.branch_id('A')) $$,
   'set branch: the mentor moves a member');
