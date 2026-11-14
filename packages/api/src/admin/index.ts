@@ -1,9 +1,15 @@
 import type { Client } from '../index';
+import { createAuditApi } from './audit';
 import { createDashboardApi } from './dashboard';
 import { createMembersApi } from './members';
+import { createRolesApi, todayIst } from './roles';
+import { createSettingsApi } from './settings';
 
+export * from './audit';
 export * from './dashboard';
 export * from './members';
+export * from './roles';
+export * from './settings';
 
 export interface PermissionGrant {
   permission_key: string;
@@ -20,14 +26,13 @@ export interface AdminAccess {
 /** `super_admin` is the one step-up role the database always keeps (app_settings constraint). */
 export const STEP_UP_ROLE = 'super_admin';
 
-function todayIst(now: Date): string {
-  return new Date(now.getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
 export function createAdminApi(client: Client) {
   return {
     ...createDashboardApi(client),
     ...createMembersApi(client),
+    ...createRolesApi(client),
+    ...createAuditApi(client),
+    ...createSettingsApi(client),
     /**
      * What the admin area needs to decide access. my_permissions() already drops step-up role
      * permissions while the session has no step-up, so "needs a step-up" is derived: the caller
