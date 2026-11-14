@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { CheckinEntry } from '@/features/checkin/CheckinEntry';
+import { PrintPassesEntry } from '@/features/checkin/PrintPassesEntry';
 import { whenText } from '../helpers';
 import { useEvent } from '../hooks';
 import { AttendeesPanel } from './AttendeesPanel';
@@ -136,6 +137,7 @@ function Body({ event }: { event: EventRow }) {
       </Card>
 
       {event.status === 'published' ? <CheckinEntry eventId={event.id} /> : null}
+      {event.status === 'published' ? <PrintPassesEntry eventId={event.id} /> : null}
       {event.status !== 'draft' ? <AttendeesPanel eventId={event.id} /> : null}
       <TeamPanel eventId={event.id} />
     </>

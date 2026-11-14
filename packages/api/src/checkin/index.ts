@@ -14,7 +14,13 @@ export type MemberPass = {
   qr: string;
 };
 
-export type PassErrorCode = 'offline' | 'not_configured' | 'failed';
+export type PassErrorCode = 'offline' | 'not_configured' | 'not_allowed' | 'too_many' | 'failed';
+
+/** One pass on a bulk print sheet (member-pass with a scope). */
+export type BulkPass = Omit<MemberPass, 'is_self'>;
+
+/** What a bulk sheet covers: a branch's active members or an event's active registrants. */
+export type BulkScope = { branch_id: string } | { event_id: string };
 
 export class PassError extends Error {
   constructor(public code: PassErrorCode) {
@@ -119,6 +125,29 @@ export function createCheckinApi(client: Client) {
       const passes = (data as { passes?: unknown } | null)?.passes;
       if (!Array.isArray(passes) || !passes.every(isPass)) throw new PassError('failed');
       return passes;
+    },
+
+    /**
+     * Officer action: the signed passes for a print sheet. The server builds the list from the
+     * scope (at most 500) and audits the batch. not_allowed: no right to this scope.
+     */
+    async bulkPasses(scope: BulkScope): Promise<BulkPass[]> {
+      const { data, error } = await client.functions.invoke('member-pass', {
+        method: 'POST',
+        body: { scope },
+      });
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (error.name === 'FunctionsFetchError') throw new PassError('offline');
+        if (status === 403) throw new PassError('not_allowed');
+        if (status === 413) throw new PassError('too_many');
+        throw new PassError(status === 503 ? 'not_configured' : 'failed');
+      }
+      const passes = (data as { passes?: unknown } | null)?.passes;
+      if (!Array.isArray(passes) || !passes.every((p) => isPass({ ...p, is_self: false }))) {
+        throw new PassError('failed');
+      }
+      return passes as BulkPass[];
     },
 
     /** The signed-in user's id from the local session (no network), to key the offline cache. */

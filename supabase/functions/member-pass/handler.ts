@@ -1,4 +1,5 @@
-// member-pass: signs the static delegate pass of the caller and of their active wards.
+// member-pass: signs the static delegate pass of the caller and of their active wards, or (with a
+// `scope` body) the passes an officer may bulk-print for a branch or an event (bulk_passes()).
 // verify_jwt stays on. The rows come from public.my_passes(), called with the caller's own JWT,
 // so the database decides who gets a pass (active caller, active guardian links only).
 // The QR format must match packages/api/src/checkin/format.ts (cross-checked by the tests).
@@ -11,11 +12,43 @@ export type PassRow = {
   is_self: boolean;
 };
 
+export type BulkRow = Omit<PassRow, 'is_self'>;
+
+/** A bulk-print scope: exactly one of a branch or an event. The database builds the member list. */
+export type BulkScope = { branch_id: string } | { event_id: string };
+
 export type Deps = {
   /** PASS_SIGNING_PRIVATE_KEY: base64url of the 32-byte Ed25519 seed. */
   signingSeed: string | undefined;
   /** Calls my_passes() as the caller (their Authorization header). */
   listPasses: (authorization: string) => Promise<PassRow[]>;
+  /**
+   * Calls bulk_passes(scope) as the caller. On a database error it throws an Error whose message is
+   * the Postgres error code only (42501 refused, 54000 over the cap, 22023 bad scope).
+   */
+  listBulkPasses: (authorization: string, scope: BulkScope) => Promise<BulkRow[]>;
+};
+
+/**
+ * The request body names a scope, never member ids: `{ "scope": { "branch_id": "<uuid>" } }` or
+ * `{ "scope": { "event_id": "<uuid>" } }`. Anything else in the body is ignored. Returns null for
+ * a malformed scope.
+ */
+export function parseScope(scope: unknown): BulkScope | null {
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) return null;
+  const keys = Object.keys(scope);
+  if (keys.length !== 1) return null;
+  const value = (scope as Record<string, unknown>)[keys[0]];
+  if (typeof value !== 'string' || !UUID_RE.test(value.toLowerCase())) return null;
+  if (keys[0] === 'branch_id') return { branch_id: value.toLowerCase() };
+  if (keys[0] === 'event_id') return { event_id: value.toLowerCase() };
+  return null;
+}
+
+const BULK_ERRORS: Record<string, [number, string]> = {
+  '42501': [403, 'forbidden'],
+  '54000': [413, 'too many'],
+  '22023': [400, 'bad request'],
 };
 
 const CORS = {
@@ -96,6 +129,45 @@ export function createHandler(deps: Deps) {
       // Fail closed. Never log the secret or why it failed to parse.
       console.error('member-pass: signing key missing or invalid');
       return json(503, { error: 'not configured' });
+    }
+
+    // An empty body is the caller's own passes (chunk 1); a body with `scope` is a bulk print.
+    let body: Record<string, unknown> = {};
+    const text = await req.text();
+    if (text.trim()) {
+      try {
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+        body = parsed;
+      } catch {
+        return json(400, { error: 'bad request' });
+      }
+    }
+
+    if ('scope' in body) {
+      const scope = parseScope(body.scope);
+      if (!scope) return json(400, { error: 'bad request' });
+      let bulk: BulkRow[];
+      try {
+        bulk = await deps.listBulkPasses(authorization, scope);
+      } catch (err) {
+        const code = err instanceof Error ? err.message : '';
+        const known = BULK_ERRORS[code];
+        if (known) return json(known[0], { error: known[1] });
+        console.error('member-pass: bulk_passes failed');
+        return json(500, { error: 'failed' });
+      }
+      const passes = [];
+      for (const r of bulk) {
+        passes.push({
+          member_id: r.member_id,
+          full_name: r.full_name,
+          branch_name: r.branch_name,
+          pass_version: r.pass_version,
+          qr: await signPass(signingKey, r.member_id, r.pass_version),
+        });
+      }
+      return json(200, { passes });
     }
 
     let rows: PassRow[];

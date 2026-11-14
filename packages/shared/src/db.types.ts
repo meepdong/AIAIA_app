@@ -1013,6 +1013,11 @@ isOneToOne: false
 "branch_officers":
 { Args: { "branch": string }; Returns: string[]
                            },
+"bulk_passes":
+{ Args: { "branch_id"?: string,"event_id"?: string }; Returns: {
+              "branch_name": string,"full_name": string,"member_id": string,"pass_version": number
+            }[]
+                           },
 "can_manage_member":
 { Args: { "target": string }; Returns: boolean
                            },
