@@ -1,4 +1,9 @@
 import type { Client } from '../index';
+import { createDashboardApi } from './dashboard';
+import { createMembersApi } from './members';
+
+export * from './dashboard';
+export * from './members';
 
 export interface PermissionGrant {
   permission_key: string;
@@ -21,6 +26,8 @@ function todayIst(now: Date): string {
 
 export function createAdminApi(client: Client) {
   return {
+    ...createDashboardApi(client),
+    ...createMembersApi(client),
     /**
      * What the admin area needs to decide access. my_permissions() already drops step-up role
      * permissions while the session has no step-up, so "needs a step-up" is derived: the caller
