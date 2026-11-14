@@ -49,6 +49,14 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-secure-store',
+    'expo-sqlite',
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'Allow AIAIA to use the camera to scan delegate passes at check-in.',
+        recordAudioAndroid: false,
+      },
+    ],
     [
       'expo-splash-screen',
       {

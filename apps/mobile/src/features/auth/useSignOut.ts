@@ -2,6 +2,7 @@ import type { Api } from '@aiaia/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { clearPassCache } from '@/features/checkin/pass-cache';
+import { clearScanData } from '@/features/checkin/scan-store';
 import { getPushToken } from './push-token';
 import { useApi } from './useApi';
 
@@ -19,7 +20,10 @@ export function useSignOut(): () => Promise<Awaited<ReturnType<Api['auth']['sign
     const result = await auth.signOut({ pushToken: getPushToken() });
     queryClient.clear();
     // The saved delegate passes belong to this person, not to the next one on this device.
-    if (userId) await clearPassCache(userId);
+    if (userId) {
+      await clearPassCache(userId);
+      await clearScanData(userId);
+    }
     return result;
   }, [auth, checkin, queryClient]);
 }
