@@ -1,12 +1,13 @@
 import type { Api, Membership } from '@aiaia/api';
-import { act, render, screen } from '@testing-library/react-native';
-import { AppState, Text } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { AppState, Pressable, Text } from 'react-native';
 import { ApiProvider } from '@/features/auth/useApi';
 import {
   PROFILE_RETRY_MS,
   SessionProvider,
   homeRouteFor,
   stateForMembership,
+  useRefreshMembership,
   useSessionState,
 } from './session';
 
@@ -110,7 +111,7 @@ describe('auth gate: every state routes to its screen', () => {
     await renderGate();
     await signIn(member('active', true));
     expect(state()).toBe('adult_consent');
-    expect(route()).toBe('/waiting-room');
+    expect(route()).toBe('/adult-consent');
   });
 
   it('active: the member app', async () => {
@@ -251,5 +252,56 @@ describe('foreground refresh (native)', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe('refreshMembership', () => {
+  let last: unknown;
+  let appState: jest.SpyInstance;
+  beforeEach(() => {
+    appState = jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove: jest.fn() });
+  });
+  afterEach(() => appState.mockRestore());
+  function RefreshProbe() {
+    const refresh = useRefreshMembership();
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={async () => {
+          last = await refresh();
+        }}
+      >
+        <Text>refresh</Text>
+      </Pressable>
+    );
+  }
+  async function renderWithRefresh() {
+    await render(
+      <ApiProvider api={api}>
+        <SessionProvider>
+          <Probe />
+          <RefreshProbe />
+        </SessionProvider>
+      </ApiProvider>,
+    );
+  }
+
+  it('re-reads my_profile() and moves a pending member to active', async () => {
+    await renderWithRefresh();
+    await signIn(member('pending'));
+    expect(state()).toBe('pending');
+    mockAuth.loadMembership.mockResolvedValue(member('active'));
+    await fireEvent.press(screen.getByRole('button', { name: 'refresh' }));
+    expect(state()).toBe('active');
+    expect(last).toBe('active');
+  });
+
+  it('a failed read leaves the state alone and never opens the app', async () => {
+    await renderWithRefresh();
+    await signIn(member('pending'));
+    mockAuth.loadMembership.mockResolvedValue({ ok: false, kind: 'offline', message: 'x' });
+    await fireEvent.press(screen.getByRole('button', { name: 'refresh' }));
+    expect(state()).toBe('pending');
+    expect(last).toBeNull();
   });
 });

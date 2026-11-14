@@ -13,6 +13,7 @@ describe('auth-gate stub', () => {
     expect(homeRouteFor('no_profile')).toBe('/profile-setup');
     expect(homeRouteFor('pending')).toBe('/waiting-room');
     expect(homeRouteFor('blocked')).toBe('/blocked');
+    expect(homeRouteFor('adult_consent')).toBe('/adult-consent');
     expect(homeRouteFor('active')).toBe('/home');
   });
 
