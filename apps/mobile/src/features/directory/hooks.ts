@@ -1,13 +1,12 @@
-import { createApi } from '@aiaia/api';
 import { DIRECTORY_PAGE_SIZE } from '@aiaia/shared/src/schemas/content';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { getDefaultApi } from '@/features/auth/useApi';
 
 export const SEARCH_DEBOUNCE_MS = 300;
 
 function directoryApi() {
-  return createApi(getSupabase()).directory;
+  return getDefaultApi().directory;
 }
 
 export function useDebouncedValue<T>(value: T, delayMs = SEARCH_DEBOUNCE_MS): T {

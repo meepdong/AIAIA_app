@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { AppProviders } from './AppProviders';
 
+// The session provider reaches the API layer, which would load the native storage modules.
+jest.mock('@/lib/supabase', () => ({
+  getSupabase: () => {
+    throw new Error('no Supabase config in this test');
+  },
+}));
+
 // SafeAreaProvider renders nothing until native metrics arrive; the library ships a mock.
 jest.mock(
   'react-native-safe-area-context',

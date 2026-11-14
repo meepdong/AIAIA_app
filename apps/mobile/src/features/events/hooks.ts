@@ -1,10 +1,9 @@
-import { createEventsApi, type ListEventsOptions } from '@aiaia/api';
+import type { ListEventsOptions } from '@aiaia/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { useApi } from '@/features/auth/useApi';
 
 export function useEventsApi() {
-  return useMemo(() => createEventsApi(getSupabase()), []);
+  return useApi().events;
 }
 
 export function useMyMember() {
