@@ -3,7 +3,7 @@
 -- no member_private row and so no DOB on record (…072), two test-only branch roles carrying
 -- data.export (one with members.approve, one without), notify_dispatch_secret.
 begin;
-select plan(102);
+select plan(137);
 
 create temp table t_ids (k text primary key, v uuid);
 grant all on t_ids to authenticated;
@@ -41,10 +41,14 @@ select ok(not has_function_privilege('anon', 'public.admin_setting_is_secret(tex
   'anon cannot execute admin_setting_is_secret');
 select ok(not has_function_privilege('authenticated', 'public.admin_setting_is_secret(text)', 'execute'),
   'authenticated cannot execute admin_setting_is_secret');
-select ok(not has_function_privilege('anon', 'public.admin_setting_is_locked(text)', 'execute'),
-  'anon cannot execute admin_setting_is_locked');
-select ok(not has_function_privilege('authenticated', 'public.admin_setting_is_locked(text)', 'execute'),
-  'authenticated cannot execute admin_setting_is_locked');
+select ok(not has_function_privilege('anon', 'public.admin_setting_is_editable(text)', 'execute'),
+  'anon cannot execute admin_setting_is_editable');
+select ok(not has_function_privilege('authenticated', 'public.admin_setting_is_editable(text)', 'execute'),
+  'authenticated cannot execute admin_setting_is_editable');
+select ok(not has_function_privilege('anon', 'public.admin_setting_value_error(text, jsonb)', 'execute'),
+  'anon cannot execute admin_setting_value_error');
+select ok(not has_function_privilege('authenticated', 'public.admin_setting_value_error(text, jsonb)', 'execute'),
+  'authenticated cannot execute admin_setting_value_error');
 
 -- ===== admin_export_members: refused ======================================
 select tests.as_anon();
@@ -311,6 +315,84 @@ select isnt_empty($$ select 1 from public.audit_log where action = 'settings.upd
   'the setting change is audited');
 select is((select branch_id from public.members where id = tests.member_id('pending')), tests.branch_id('B'),
   'the pending applicant moved');
+
+-- ===== settings: allowlist and per-key value rules (step-up super admin) ===
+insert into public.app_settings (key, value, is_public, description)
+values ('test_unlisted_setting', '5'::jsonb, false, 'test: an ordinary key that is not on the allowlist');
+select tests.authenticate_as('super_admin');
+select ok(not (select to_jsonb(s) ? 'updated_by' from public.admin_list_settings() s where s.key = 'email_daily_cap'),
+  'list settings: updated_by is not returned');
+select results_eq($$ select key from public.admin_list_settings() where editable order by key $$,
+  $$ values ('adult_handover_grace_days'), ('email_daily_cap'), ('grievance_officer'), ('legal_approved'),
+            ('min_app_version'), ('retention_months'), ('step_up_roles'), ('trusted_device_days') $$,
+  'list settings: exactly the allowlisted keys are editable');
+select ok((select value = '5'::jsonb and not is_secret and not editable from public.admin_list_settings() where key = 'test_unlisted_setting'),
+  'list settings: a key off the allowlist is shown but not editable');
+select throws_ok($$ select public.admin_set_setting('test_unlisted_setting', '6') $$, '42501', null,
+  'set setting: a non-secret key off the allowlist is refused');
+
+select lives_ok($$ select public.admin_set_setting('adult_handover_grace_days', '30') $$, 'set setting: grace days 30 is accepted');
+select throws_ok($$ select public.admin_set_setting('adult_handover_grace_days', '366') $$, '22023', null,
+  'set setting: grace days 366 is refused');
+select throws_ok($$ select public.admin_set_setting('adult_handover_grace_days', '1e10') $$, '22023', null,
+  'set setting: grace days 1e10 is refused');
+select throws_ok($$ select public.admin_set_setting('adult_handover_grace_days', '-1') $$, '22023', null,
+  'set setting: negative grace days are refused');
+select throws_ok($$ select public.admin_set_setting('email_daily_cap', '0') $$, '22023', null,
+  'set setting: an email cap of 0 is refused');
+select throws_ok($$ select public.admin_set_setting('email_daily_cap', '1500.5') $$, '22023', null,
+  'set setting: a fractional email cap is refused');
+select lives_ok($$ select public.admin_set_setting('retention_months', '12') $$, 'set setting: retention 12 months is accepted');
+select throws_ok($$ select public.admin_set_setting('retention_months', '0') $$, '22023', null,
+  'set setting: retention 0 months is refused');
+select throws_ok($$ select public.admin_set_setting('retention_months', 'null') $$, '22023', null,
+  'set setting: retention null is refused');
+select throws_ok($$ select public.admin_set_setting('retention_months', '121') $$, '22023', null,
+  'set setting: retention 121 months is refused');
+select lives_ok($$ select public.admin_set_setting('trusted_device_days', 'null') $$, 'set setting: trusted_device_days may go back to null');
+select throws_ok($$ select public.admin_set_setting('trusted_device_days', '0') $$, '22023', null,
+  'set setting: trusted_device_days 0 is refused');
+select throws_ok($$ select public.admin_set_setting('trusted_device_days', '3651') $$, '22023', null,
+  'set setting: trusted_device_days 3651 is refused');
+select throws_ok($$ select public.admin_set_setting('trusted_device_days', '"30"') $$, '22023', null,
+  'set setting: trusted_device_days as text is refused');
+select lives_ok($$ select public.admin_set_setting('legal_approved', 'true') $$, 'set setting: legal_approved true is accepted');
+select throws_ok($$ select public.admin_set_setting('legal_approved', '"yes"') $$, '22023', null,
+  'set setting: legal_approved as text is refused');
+select lives_ok($$ select public.admin_set_setting('min_app_version', '"1.2.3"') $$, 'set setting: min_app_version 1.2.3 is accepted');
+select throws_ok($$ select public.admin_set_setting('min_app_version', '"1.2"') $$, '22023', null,
+  'set setting: a min_app_version that is not x.y.z is refused');
+select lives_ok($$ select public.admin_set_setting('step_up_roles', '["super_admin", "mentor"]') $$,
+  'set setting: step_up_roles with two existing roles is accepted');
+select throws_ok($$ select public.admin_set_setting('step_up_roles', '["super_admin", "no_such_role"]') $$, '22023', null,
+  'set setting: step_up_roles with an unknown role is refused');
+select throws_ok($$ select public.admin_set_setting('step_up_roles', '["super_admin", 3]') $$, '22023', null,
+  'set setting: step_up_roles with a non-string entry is refused');
+select throws_ok($$ select public.admin_set_setting('step_up_roles', '["super_admin", "super_admin"]') $$, '22023', null,
+  'set setting: step_up_roles with a repeated role is refused');
+select lives_ok($$ select public.admin_set_setting('grievance_officer',
+  '{"title": "Grievance Officer", "name": "Asha Demokar", "email": "grievance@example.org", "phone": null, "placeholder": false}') $$,
+  'set setting: a complete grievance contact is accepted');
+select throws_ok($$ select public.admin_set_setting('grievance_officer', '{"title": "Grievance Officer", "notes": "x"}') $$, '22023', null,
+  'set setting: a grievance contact with an unknown field is refused');
+select throws_ok($$ select public.admin_set_setting('grievance_officer', jsonb_build_object('title', 'Grievance Officer', 'name', repeat('x', 201))) $$,
+  '22023', null, 'set setting: a grievance contact name over 200 characters is refused');
+select throws_ok($$ select public.admin_set_setting('grievance_officer', '{"name": "Asha Demokar"}') $$, '22023', null,
+  'set setting: a grievance contact without a title is refused');
+select throws_ok($$ select public.admin_set_setting('grievance_officer', jsonb_build_object('title', repeat('x', 10001))) $$,
+  '22023', 'admin_set_setting: value is limited to 10000 characters',
+  'set setting: a value over 10000 characters is refused by the length limit');
+select tests.clear_auth();
+select is((select value from public.app_settings where key = 'test_unlisted_setting'), '5'::jsonb,
+  'the key off the allowlist is unchanged');
+select ok((select value = '30'::jsonb from public.app_settings where key = 'adult_handover_grace_days')
+          and (select value = '12'::jsonb from public.app_settings where key = 'retention_months')
+          and (select value = 'null'::jsonb from public.app_settings where key = 'trusted_device_days')
+          and (select value = '1500'::jsonb from public.app_settings where key = 'email_daily_cap')
+          and (select value = '"1.2.3"'::jsonb from public.app_settings where key = 'min_app_version')
+          and (select value = '["super_admin", "mentor"]'::jsonb from public.app_settings where key = 'step_up_roles')
+          and (select value ->> 'name' = 'Asha Demokar' from public.app_settings where key = 'grievance_officer'),
+  'only the accepted values were stored');
 
 select * from finish();
 rollback;

@@ -2,7 +2,7 @@
 --   admin_set_member_branch  edit a member's branch (members.manage old branch + members.approve new)
 --   admin_export_members     keyset-paged CSV export source (data.export), one audit row per page
 --   admin_list_settings      app_settings for system.config holders, secret values masked
---   admin_set_setting        edit an existing, non-secret app_settings value (system.config)
+--   admin_set_setting        edit an allowlisted app_settings value, checked per key (system.config)
 -- All are security definer with search_path = '' and check has_permission(); super-admin grants
 -- count only with a step-up, through has_permission() itself.
 
@@ -219,7 +219,7 @@ grant execute on function public.admin_export_members(uuid, integer, uuid) to au
 -- Settings
 -- ---------------------------------------------------------------------------
 -- A secret setting is any key containing secret, token, password or key. Its value is never
--- returned to a client and it cannot be changed here (only by the service role / ops).
+-- returned to a client (only the service role / ops see or change it).
 create function public.admin_setting_is_secret(key text)
 returns boolean
 language sql immutable
@@ -229,18 +229,134 @@ as $$
 $$;
 revoke execute on function public.admin_setting_is_secret(text) from public, anon, authenticated;
 
--- Readable but not editable here: the URL notify-dispatch is woken at carries the dispatch secret
--- in a header (wake_notify_dispatch), so changing it could send that secret elsewhere.
-create function public.admin_setting_is_locked(key text)
+-- The allowlist: the only keys admin_set_setting may change. Every other key (secrets, any key
+-- added later) is read-only here until a migration adds it together with a value rule in
+-- admin_setting_value_error. Never list a secret-named key.
+--   adult_handover_grace_days  integer 0-365. is_guardian_of adds it to a date in every guardian
+--                              RLS check: huge values overflow, large ones keep guardians on adults.
+--   email_daily_cap            integer 1-10000. Daily sends through the primary provider
+--                              (Workspace allows about 2000).
+--   grievance_officer          object. Public grievance contact: title (text, required), name,
+--                              email, phone (text or null), placeholder (boolean); nothing else.
+--   legal_approved             boolean. Hides the DRAFT banner on the public legal pages.
+--   min_app_version            text 'x.y.z' (each part 0-9999). Oldest app version allowed to run.
+--   retention_months           integer 1-120. Purge cut-off for rejected and deleted accounts;
+--                              0 or null would purge at once or break the purge.
+--   step_up_roles              array of existing role keys, no repeats. The table checks still
+--                              apply (an array that keeps super_admin, never public).
+--   trusted_device_days        null or integer 1-3650. Null: trusted devices never expire (the
+--                              owner's default).
+-- Left off: notify_dispatch_url. The notify-dispatch wake-up sends the dispatch secret in a header
+-- to that URL (wake_notify_dispatch), so changing it could send the secret elsewhere.
+-- notify_dispatch_secret is a secret.
+create function public.admin_setting_is_editable(key text)
 returns boolean
 language sql immutable
 set search_path = ''
 as $$
-  select admin_setting_is_locked.key = any (array['notify_dispatch_url']);
+  select admin_setting_is_editable.key = any (array[
+    'adult_handover_grace_days', 'email_daily_cap', 'grievance_officer', 'legal_approved',
+    'min_app_version', 'retention_months', 'step_up_roles', 'trusted_device_days'
+  ]);
 $$;
-revoke execute on function public.admin_setting_is_locked(text) from public, anon, authenticated;
+revoke execute on function public.admin_setting_is_editable(text) from public, anon, authenticated;
 
--- admin_list_settings(): every app_settings row for system.config holders; secret values are null.
+-- The value rule of each allowlisted key: null when v is acceptable for k, else what is wrong.
+-- A key without a rule is refused. Each test is its own statement, so no check runs on a value
+-- of the wrong JSON type.
+create function public.admin_setting_value_error(k text, v jsonb)
+returns text
+language plpgsql stable
+set search_path = ''
+as $$
+declare
+  t text := jsonb_typeof(v);
+  n numeric;  -- v as a whole number, or null
+begin
+  if t = 'number' then
+    n := v::text::numeric;
+    if n <> trunc(n) then
+      n := null;
+    end if;
+  end if;
+
+  case k
+  when 'adult_handover_grace_days' then
+    if n is null or n < 0 or n > 365 then
+      return 'expects a whole number from 0 to 365';
+    end if;
+  when 'email_daily_cap' then
+    if n is null or n < 1 or n > 10000 then
+      return 'expects a whole number from 1 to 10000';
+    end if;
+  when 'retention_months' then
+    if n is null or n < 1 or n > 120 then
+      return 'expects a whole number from 1 to 120';
+    end if;
+  when 'trusted_device_days' then
+    if t <> 'null' and (n is null or n < 1 or n > 3650) then
+      return 'expects null or a whole number from 1 to 3650';
+    end if;
+  when 'legal_approved' then
+    if t <> 'boolean' then
+      return 'expects true or false';
+    end if;
+  when 'min_app_version' then
+    if t <> 'string' then
+      return 'expects a version like 1.2.3';
+    end if;
+    if (v #>> '{}') !~ '^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$' then
+      return 'expects a version like 1.2.3';
+    end if;
+  when 'step_up_roles' then
+    if t <> 'array' then
+      return 'expects a list of role keys';
+    end if;
+    if exists (select 1 from jsonb_array_elements(v) as e(x) where jsonb_typeof(e.x) <> 'string') then
+      return 'expects a list of role keys';
+    end if;
+    if exists (select 1 from jsonb_array_elements_text(v) as e(x)
+               where not exists (select 1 from public.roles r where r.key = e.x)) then
+      return 'lists a role that does not exist';
+    end if;
+    if (select count(distinct e.x) from jsonb_array_elements_text(v) as e(x)) <> jsonb_array_length(v) then
+      return 'lists a role twice';
+    end if;
+  when 'grievance_officer' then
+    if t <> 'object' then
+      return 'expects a contact object';
+    end if;
+    if exists (select 1 from jsonb_object_keys(v) as o(x)
+               where o.x not in ('title', 'name', 'email', 'phone', 'placeholder')) then
+      return 'takes only title, name, email, phone and placeholder';
+    end if;
+    if jsonb_typeof(v -> 'title') is distinct from 'string' then
+      return 'needs a title of 1 to 200 characters';
+    end if;
+    if length(v ->> 'title') not between 1 and 200 then
+      return 'needs a title of 1 to 200 characters';
+    end if;
+    if exists (select 1 from jsonb_each(v) as f(fk, fv)
+               where f.fk in ('name', 'email', 'phone') and jsonb_typeof(f.fv) not in ('null', 'string')) then
+      return 'expects name, email and phone as text or null';
+    end if;
+    if exists (select 1 from jsonb_each_text(v) as f(fk, fv)
+               where f.fk in ('name', 'email', 'phone') and length(f.fv) > 200) then
+      return 'expects name, email and phone of at most 200 characters';
+    end if;
+    if v ? 'placeholder' and jsonb_typeof(v -> 'placeholder') <> 'boolean' then
+      return 'expects placeholder as true or false';
+    end if;
+  else
+    return 'has no value rule';
+  end case;
+  return null;
+end;
+$$;
+revoke execute on function public.admin_setting_value_error(text, jsonb) from public, anon, authenticated;
+
+-- admin_list_settings(): every app_settings row for system.config holders; secret values are null;
+-- editable is the allowlist above. updated_by is left out, as the column grants withhold it.
 create function public.admin_list_settings()
 returns table (
   key text,
@@ -248,7 +364,6 @@ returns table (
   is_public boolean,
   description text,
   updated_at timestamptz,
-  updated_by uuid,
   is_secret boolean,
   editable boolean
 )
@@ -262,9 +377,9 @@ begin
   return query
   select s.key,
          case when public.admin_setting_is_secret(s.key) then null else s.value end,
-         s.is_public, s.description, s.updated_at, s.updated_by,
+         s.is_public, s.description, s.updated_at,
          public.admin_setting_is_secret(s.key),
-         not (public.admin_setting_is_secret(s.key) or public.admin_setting_is_locked(s.key))
+         public.admin_setting_is_editable(s.key)
   from public.app_settings s
   order by s.key;
 end;
@@ -272,10 +387,10 @@ $$;
 revoke execute on function public.admin_list_settings() from public, anon;
 grant execute on function public.admin_list_settings() to authenticated;
 
--- admin_set_setting(key, value): system.config; an existing, non-secret, unlocked key only. The new
--- value keeps the JSON type of the old one (null may become, or replace, any type) and is at most
--- 10000 characters. Table checks (e.g. step_up_roles keeps super_admin) still apply. Values are not
--- copied into the audit log, as with the app_settings_audit trigger.
+-- admin_set_setting(key, value): system.config; an existing, allowlisted key only (42501
+-- otherwise). The value is at most 10000 characters and must pass the key's value rule (22023).
+-- Table checks (e.g. step_up_roles keeps super_admin) still apply. Values are not copied into the
+-- audit log, as with the app_settings_audit trigger.
 create function public.admin_set_setting(key text, value jsonb)
 returns jsonb
 language plpgsql volatile security definer
@@ -284,6 +399,7 @@ as $$
 declare
   me uuid := public.current_member_id();
   cur record;
+  v_error text;
   v_updated timestamptz;
 begin
   if not public.has_permission('system.config') then
@@ -292,17 +408,14 @@ begin
   if admin_set_setting.key is null then
     raise exception 'admin_set_setting: key is required' using errcode = '22023';
   end if;
-  if public.admin_setting_is_secret(admin_set_setting.key) then
-    raise exception 'admin_set_setting: secret settings cannot be changed here' using errcode = '42501';
-  end if;
-  if public.admin_setting_is_locked(admin_set_setting.key) then
-    raise exception 'admin_set_setting: this setting cannot be changed here' using errcode = '42501';
-  end if;
 
   select s.key, s.value, s.is_public into cur
   from public.app_settings s where s.key = admin_set_setting.key for update;
   if cur.key is null then
     raise exception 'admin_set_setting: unknown setting' using errcode = '22023';
+  end if;
+  if not public.admin_setting_is_editable(cur.key) then
+    raise exception 'admin_set_setting: this setting cannot be changed here' using errcode = '42501';
   end if;
   if admin_set_setting.value is null then
     raise exception 'admin_set_setting: value is required (use JSON null to clear)' using errcode = '22023';
@@ -310,9 +423,9 @@ begin
   if length(admin_set_setting.value::text) > 10000 then
     raise exception 'admin_set_setting: value is limited to 10000 characters' using errcode = '22023';
   end if;
-  if jsonb_typeof(admin_set_setting.value) <> jsonb_typeof(cur.value)
-     and 'null' not in (jsonb_typeof(admin_set_setting.value), jsonb_typeof(cur.value)) then
-    raise exception 'admin_set_setting: % expects a JSON %', cur.key, jsonb_typeof(cur.value) using errcode = '22023';
+  v_error := public.admin_setting_value_error(cur.key, admin_set_setting.value);
+  if v_error is not null then
+    raise exception 'admin_set_setting: % %', cur.key, v_error using errcode = '22023';
   end if;
 
   update public.app_settings s set value = admin_set_setting.value, updated_by = me

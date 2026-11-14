@@ -945,7 +945,7 @@ isOneToOne: false
                            },
 "admin_list_settings":
 { Args: Record<PropertyKey, never>; Returns: {
-              "description": string,"editable": boolean,"is_public": boolean,"is_secret": boolean,"key": string,"updated_at": string,"updated_by": string,"value": Json
+              "description": string,"editable": boolean,"is_public": boolean,"is_secret": boolean,"key": string,"updated_at": string,"value": Json
             }[]
                            },
 "admin_set_member_branch":
@@ -954,11 +954,14 @@ isOneToOne: false
 "admin_set_setting":
 { Args: { "key": string,"value": Json }; Returns: Json
                            },
-"admin_setting_is_locked":
+"admin_setting_is_editable":
 { Args: { "key": string }; Returns: boolean
                            },
 "admin_setting_is_secret":
 { Args: { "key": string }; Returns: boolean
+                           },
+"admin_setting_value_error":
+{ Args: { "k": string,"v": Json }; Returns: string
                            },
 "adult_handover_grace_days":
 { Args: Record<PropertyKey, never>; Returns: number
