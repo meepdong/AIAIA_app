@@ -168,9 +168,12 @@ describe('createAuthApi', () => {
   it('is registered on createApi as api.auth', () => {
     const api = createApi(asClient(makeClient()));
     expect(Object.keys(api.auth).sort()).toEqual([
+      'loadMembership',
       'onSession',
       'requestCode',
       'signOut',
+      'startAutoRefresh',
+      'stopAutoRefresh',
       'verifyCode',
     ]);
   });

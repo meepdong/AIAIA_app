@@ -4,8 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProviders } from '@/providers/AppProviders';
 import { useSessionState } from '@/lib/session';
 
-// Auth-gate stub: the mocked session state decides which route group is reachable.
-// Later briefs swap the data source in src/lib/session.tsx; this gate stays.
+// Auth gate: the session state (real session + my_profile(), see src/lib/session.tsx) decides
+// which route group is reachable.
 function Gate() {
   const state = useSessionState();
   const ready = state !== 'loading';

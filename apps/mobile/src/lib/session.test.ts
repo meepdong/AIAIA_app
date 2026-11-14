@@ -1,5 +1,12 @@
 import { SESSION_STATES, homeRouteFor, isSessionState, useMockedSessionState } from './session';
 
+// The session provider reaches the API layer, which would load the native storage modules.
+jest.mock('@/lib/supabase', () => ({
+  getSupabase: () => {
+    throw new Error('no Supabase config in this test');
+  },
+}));
+
 describe('auth-gate stub', () => {
   it('routes each session state to its screen', () => {
     expect(homeRouteFor('signed_out')).toBe('/phone');
