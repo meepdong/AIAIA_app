@@ -160,6 +160,9 @@ The team is three people: a UI dev, a backend dev and the owner (project lead, c
   - Notification fan-out must target `status = 'active'` members only, since non-active members can read their own notifications.
 - **P1-06 (test gap from P1-00a):** the push-token update/delete and notification `read_at` tests use rows the caller can't see, so they don't pin those write policies. Add tests on visible rows once P1-06 adds the writers.
 - **P1-13a:** the `/delete-account` button goes to `/`. Point it at the Settings delete route; there's a TODO in `delete-account.tsx`.
+- **P1-11 (from the P1-05 review):** `apps/mobile/src/features/directory/ReportMember.tsx` stands in for `<ReportButton>`. Swap its body for `<ReportButton targetType="member" targetId={memberId} />` and delete `REPORT_REASONS`.
+- **P2-04 (from the P1-05 review):** directory cards show initials because `photo_path` is private. Use signed photo URLs once media signing exists.
+- **UI polish (from the P1-05 review, low):** the app tabs have no icons yet.
 - **P1-09 test gap (optional):** no test renders the real root layout signed-out at `/privacy`. Signed-out access depends on `(public)` staying outside `Stack.Protected`.
 - **P0-03 deploy checks:**
   - Confirm hosted `postgres` can SELECT `auth.sessions`; `has_step_up()` needs it.
