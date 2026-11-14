@@ -8,17 +8,19 @@ import { verifyWebhook } from '../_shared/standard-webhooks.ts';
 import type { SendResult } from '../_shared/whatsapp.ts';
 
 export const WHATSAPP_TEMPLATE = 'aiaia_login_code';
+// Enforced by public.otp_throttle_take (migration 20261115000110); keep the two in step.
 export const MAX_PER_HOUR = 5;
 export const MAX_PER_DAY = 10;
 export const THROTTLE_RETENTION_MS = 2 * 24 * 60 * 60 * 1000;
 
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
+export type ThrottleTake = { allowed: true } | { allowed: false; retryAt: Date };
 
 export interface ThrottleStore {
-  /** Send times for this phone hash since `since`, oldest first. */
-  sentSince(phoneHash: string, since: Date): Promise<Date[]>;
-  record(phoneHash: string, at: Date): Promise<void>;
+  /**
+   * Atomically checks the hour/day limits for this phone hash and, when under them, records one
+   * send. Refusals carry the time the oldest counting send ages out.
+   */
+  take(phoneHash: string): Promise<ThrottleTake>;
   purgeOlderThan(cutoff: Date): Promise<void>;
 }
 
@@ -95,26 +97,18 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     }
 
     const phoneHash = await hashPhone(deps.throttleKey, phone);
+    // One atomic check-and-record. Counted before sending, so a failing provider cannot be used
+    // to burn through messages.
+    const take = await deps.store.take(phoneHash);
     const nowMs = now();
-    const sent = await deps.store.sentSince(phoneHash, new Date(nowMs - DAY_MS));
-    const inLastHour = sent.filter((at) => nowMs - at.getTime() < HOUR_MS);
-    const hourBlocked = inLastHour.length >= MAX_PER_HOUR;
-    const dayBlocked = sent.length >= MAX_PER_DAY;
-    if (hourBlocked || dayBlocked) {
-      // Wait until the oldest send that still counts against the limit ages out.
-      const hourRetry = hourBlocked
-        ? inLastHour[inLastHour.length - MAX_PER_HOUR].getTime() + HOUR_MS
-        : 0;
-      const dayRetry = dayBlocked ? sent[sent.length - MAX_PER_DAY].getTime() + DAY_MS : 0;
-      const minutes = minutesUntil(Math.max(hourRetry, dayRetry), nowMs);
+    if (!take.allowed) {
+      const minutes = minutesUntil(take.retryAt.getTime(), nowMs);
       return errorResponse(
         429,
         `Too many codes requested. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
       );
     }
 
-    // Counted before sending, so a failing provider cannot be used to burn through messages.
-    await deps.store.record(phoneHash, new Date(nowMs));
     if (random() < 0.1) {
       try {
         await deps.store.purgeOlderThan(new Date(nowMs - THROTTLE_RETENTION_MS));

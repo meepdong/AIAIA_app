@@ -1045,6 +1045,9 @@ isOneToOne: false
 "notify_member_or_guardians":
 { Args: { "data"?: Json,"guardian_body": string,"guardian_title": string,"kind": string,"priority": string,"self_body": string,"self_title": string,"target": string }; Returns: number
                            },
+"otp_throttle_take":
+{ Args: { "p_hash": string }; Returns: Json
+                           },
 "publish_announcement":
 { Args: { "id": string,"notify"?: boolean }; Returns: number
                            },

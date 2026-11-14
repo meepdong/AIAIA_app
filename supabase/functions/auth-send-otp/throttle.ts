@@ -1,47 +1,35 @@
 // Postgres-backed ThrottleStore over public.otp_throttle (service role only).
-import type { ThrottleStore } from './handler.ts';
+// The check and the insert happen atomically in public.otp_throttle_take, so parallel sends for
+// one number cannot all slip under the limit.
+import type { ThrottleStore, ThrottleTake } from './handler.ts';
 
 // The slice of supabase-js this store uses, typed structurally so no npm import is needed here.
 export interface ThrottleTableClient {
+  rpc(
+    fn: 'otp_throttle_take',
+    args: { p_hash: string },
+  ): PromiseLike<{ data: unknown; error: unknown }>;
   from(table: 'otp_throttle'): {
-    select(columns: string): {
-      eq(
-        column: string,
-        value: string,
-      ): {
-        gt(
-          column: string,
-          value: string,
-        ): {
-          order(
-            column: string,
-            options: { ascending: boolean },
-          ): PromiseLike<{ data: { sent_at: string }[] | null; error: unknown }>;
-        };
-      };
-    };
-    insert(row: { phone_hash: string; sent_at: string }): PromiseLike<{ error: unknown }>;
     delete(): { lt(column: string, value: string): PromiseLike<{ error: unknown }> };
   };
 }
 
+function parseTake(data: unknown): ThrottleTake {
+  const result = data as { allowed?: unknown; retry_at?: unknown } | null;
+  if (result?.allowed === true) return { allowed: true };
+  if (result?.allowed === false && typeof result.retry_at === 'string') {
+    const retryAt = new Date(result.retry_at);
+    if (!Number.isNaN(retryAt.getTime())) return { allowed: false, retryAt };
+  }
+  throw new Error('otp_throttle_take returned an unexpected result');
+}
+
 export function createPostgresThrottleStore(client: ThrottleTableClient): ThrottleStore {
   return {
-    async sentSince(phoneHash, since) {
-      const { data, error } = await client
-        .from('otp_throttle')
-        .select('sent_at')
-        .eq('phone_hash', phoneHash)
-        .gt('sent_at', since.toISOString())
-        .order('sent_at', { ascending: true });
-      if (error) throw new Error('otp_throttle read failed');
-      return (data ?? []).map((row) => new Date(row.sent_at));
-    },
-    async record(phoneHash, at) {
-      const { error } = await client
-        .from('otp_throttle')
-        .insert({ phone_hash: phoneHash, sent_at: at.toISOString() });
-      if (error) throw new Error('otp_throttle write failed');
+    async take(phoneHash) {
+      const { data, error } = await client.rpc('otp_throttle_take', { p_hash: phoneHash });
+      if (error) throw new Error('otp_throttle_take failed');
+      return parseTake(data);
     },
     async purgeOlderThan(cutoff) {
       const { error } = await client

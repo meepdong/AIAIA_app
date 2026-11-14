@@ -1,9 +1,22 @@
 // deno test supabase/functions/auth-send-otp
-import { assert, assertEquals, assertNotEquals, assertStringIncludes } from 'jsr:@std/assert@1';
+import {
+  assert,
+  assertEquals,
+  assertNotEquals,
+  assertRejects,
+  assertStringIncludes,
+} from 'jsr:@std/assert@1';
 import { sendMsg91Otp } from '../_shared/msg91.ts';
 import { signPayload, verifyWebhook } from '../_shared/standard-webhooks.ts';
 import { sendWhatsAppAuthTemplate } from '../_shared/whatsapp.ts';
-import { createHandler, hashPhone, MAX_PER_HOUR, type ThrottleStore } from './handler.ts';
+import {
+  createHandler,
+  hashPhone,
+  MAX_PER_DAY,
+  MAX_PER_HOUR,
+  type ThrottleStore,
+} from './handler.ts';
+import { createPostgresThrottleStore, type ThrottleTableClient } from './throttle.ts';
 
 // Fake secret and fake numbers (+91 90000 000xx) only.
 const SECRET = `v1,whsec_${btoa('test-hook-secret-0123456789abcdef')}`;
@@ -12,20 +25,33 @@ const PHONE = '919000000001'; // how Supabase sends it: no +
 const OTP = '482913';
 const NOW = Date.UTC(2026, 10, 15, 6, 0, 0);
 
-function memoryStore() {
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+// In-memory fake of public.otp_throttle_take: the same check-and-record rules, at a fixed clock.
+function memoryStore(clock: () => number = () => NOW) {
   const rows: { hash: string; at: Date }[] = [];
   const purges: Date[] = [];
   const store: ThrottleStore = {
-    sentSince: (hash, since) =>
-      Promise.resolve(
-        rows
-          .filter((r) => r.hash === hash && r.at > since)
-          .map((r) => r.at)
-          .sort((a, b) => a.getTime() - b.getTime()),
-      ),
-    record: (hash, at) => {
-      rows.push({ hash, at });
-      return Promise.resolve();
+    take: (hash) => {
+      const nowMs = clock();
+      const sent = rows
+        .filter((r) => r.hash === hash && nowMs - r.at.getTime() < DAY_MS)
+        .map((r) => r.at.getTime())
+        .sort((a, b) => a - b);
+      const inLastHour = sent.filter((t) => nowMs - t < HOUR_MS);
+      const hourBlocked = inLastHour.length >= MAX_PER_HOUR;
+      const dayBlocked = sent.length >= MAX_PER_DAY;
+      if (hourBlocked || dayBlocked) {
+        const hourRetry = hourBlocked ? inLastHour[inLastHour.length - MAX_PER_HOUR] + HOUR_MS : 0;
+        const dayRetry = dayBlocked ? sent[sent.length - MAX_PER_DAY] + DAY_MS : 0;
+        return Promise.resolve({
+          allowed: false,
+          retryAt: new Date(Math.max(hourRetry, dayRetry)),
+        });
+      }
+      rows.push({ hash, at: new Date(nowMs) });
+      return Promise.resolve({ allowed: true });
     },
     purgeOlderThan: (cutoff) => {
       purges.push(cutoff);
@@ -61,7 +87,7 @@ const hookPayload = (phone = PHONE, otp = OTP) => ({
 });
 
 function build(overrides: Partial<Parameters<typeof createHandler>[0]> = {}, nowMs = NOW) {
-  const mem = memoryStore();
+  const mem = memoryStore(() => nowMs);
   const whatsappCalls: { to: string; code: string }[] = [];
   const msg91Calls: { to: string; code: string }[] = [];
   const handler = createHandler({
@@ -169,6 +195,38 @@ Deno.test('the 11th send within a day is refused even when spaced out hourly', a
   });
   const response = await handler(await signedRequest(hookPayload()));
   assertEquals(response.status, 429);
+  // Retry when the oldest of the ten (18h05m ago) ages out of the day: 5h55m from now.
+  assertStringIncludes((await response.json()).error.message, 'Try again in 355 minutes');
+  assertEquals(mem.rows.length, 10);
+});
+
+Deno.test('the Postgres store makes one otp_throttle_take call and maps its answer', async () => {
+  const calls: { fn: string; args: unknown }[] = [];
+  let answer: { data: unknown; error: unknown } = { data: { allowed: true }, error: null };
+  const client: ThrottleTableClient = {
+    rpc: (fn, args) => {
+      calls.push({ fn, args });
+      return Promise.resolve(answer);
+    },
+    from: () => ({ delete: () => ({ lt: () => Promise.resolve({ error: null }) }) }),
+  };
+  const store = createPostgresThrottleStore(client);
+  assertEquals(await store.take('a'.repeat(64)), { allowed: true });
+  assertEquals(calls, [{ fn: 'otp_throttle_take', args: { p_hash: 'a'.repeat(64) } }]);
+
+  answer = { data: { allowed: false, retry_at: '2026-11-15T07:00:00+00:00' }, error: null };
+  assertEquals(await store.take('a'.repeat(64)), {
+    allowed: false,
+    retryAt: new Date(Date.UTC(2026, 10, 15, 7, 0, 0)),
+  });
+
+  // A failed or malformed answer never counts as allowed.
+  answer = { data: null, error: { message: 'permission denied' } };
+  await assertRejects(() => store.take('a'.repeat(64)));
+  answer = { data: { allowed: 'yes' }, error: null };
+  await assertRejects(() => store.take('a'.repeat(64)));
+  answer = { data: { allowed: false }, error: null };
+  await assertRejects(() => store.take('a'.repeat(64)));
 });
 
 Deno.test('non +91 numbers are rejected unless international is allowed', async () => {
