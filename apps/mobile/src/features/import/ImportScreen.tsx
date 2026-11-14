@@ -1,4 +1,4 @@
-import type { ImportSummary } from '@aiaia/api';
+import { ImportPartialError, type ImportSummary } from '@aiaia/api';
 import { Badge, Button, Card, QueryState, Text } from '@aiaia/ui';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createElement, useMemo, useState } from 'react';
@@ -22,7 +22,11 @@ import {
 const SHOWN_PROBLEMS = 200;
 
 /** Friendly text for an import failure. Never echoes server text. */
-export function friendlyImportError(error: unknown): string {
+export function friendlyImportError(error: unknown, alreadySaved?: number): string {
+  const saved = alreadySaved ?? (error instanceof ImportPartialError ? error.savedRows : 0);
+  if (saved > 0) {
+    return `${saved} ${saved === 1 ? 'row was' : 'rows were'} already saved; the rest were not. The rows left are still listed: check them, then try again.`;
+  }
   const e = (error ?? {}) as { code?: string; message?: string };
   if (e.code === '42501' || (e.message ?? '').includes('roster.import')) {
     return 'You do not have permission to import into one of these branches.';
@@ -39,11 +43,10 @@ function CsvFileInput({ onText }: { onText: (text: string, name: string) => void
     onChange: async (ev: { target: { files?: FileList | null; value: string } }) => {
       const file = ev.target.files?.[0];
       if (!file) return;
-      if (file.size > MAX_FILE_BYTES) {
-        onText('', file.name);
-        return;
-      }
-      onText(await file.text(), file.name);
+      const text = file.size > MAX_FILE_BYTES ? '' : await file.text();
+      // Clear the input so picking the same file again fires a change.
+      ev.target.value = '';
+      onText(text, file.name);
     },
   });
 }
@@ -76,19 +79,54 @@ export function ImportScreen({ initialText }: { initialText?: string }) {
   const [text, setText] = useState<string | null>(initialText ?? null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // After a partly failed import: the sheet rows already saved, and what those batches added up to.
+  const [savedLines, setSavedLines] = useState<ReadonlySet<number>>(new Set());
+  const [savedCounts, setSavedCounts] = useState<ImportSummary | null>(null);
+  const [savedRows, setSavedRows] = useState(0);
 
   const parsed: ParsedRoster | null = useMemo(() => {
     if (text === null || !branches.data) return null;
     if (text === '')
       return { fileErrors: ['That file is empty or too large (5 MB limit)'], rows: [] };
     const p = parseRosterCsv(text, branches.data);
-    return { ...p, rows: applyBranchPermission(p.rows, (b) => holds(grants, 'roster.import', b)) };
-  }, [text, branches.data, grants]);
+    const rows = applyBranchPermission(p.rows, (b) => holds(grants, 'roster.import', b));
+    // Rows that an earlier, partly failed attempt already saved are not sent again.
+    return { ...p, rows: rows.filter((r) => !savedLines.has(r.line)) };
+  }, [text, branches.data, grants, savedLines]);
 
   const run = useMutation({
-    mutationFn: () => api.roster.importRoster(toImportRows(parsed?.rows ?? [])),
+    mutationFn: async () => {
+      const pending = (parsed?.rows ?? []).filter((r) => r.status === 'valid' && r.row);
+      try {
+        const s = await api.roster.importRoster(toImportRows(pending));
+        // Add what an earlier, partly failed attempt had already saved.
+        return savedCounts
+          ? {
+              inserted: s.inserted + savedCounts.inserted,
+              updated: s.updated + savedCounts.updated,
+              skipped: s.skipped + savedCounts.skipped,
+            }
+          : s;
+      } catch (e) {
+        if (e instanceof ImportPartialError) {
+          setSavedLines(
+            (prev) => new Set([...prev, ...pending.slice(0, e.savedRows).map((r) => r.line)]),
+          );
+          setSavedRows((n) => n + e.savedRows);
+          setSavedCounts((c) => ({
+            inserted: (c?.inserted ?? 0) + e.savedCounts.inserted,
+            updated: (c?.updated ?? 0) + e.savedCounts.updated,
+            skipped: (c?.skipped ?? 0) + e.savedCounts.skipped,
+          }));
+        }
+        throw e;
+      }
+    },
     onSuccess: (s) => {
       setSummary(s);
+      setSavedLines(new Set());
+      setSavedCounts(null);
+      setSavedRows(0);
       // The sheet holds personal data: drop it as soon as it has been sent.
       setText(null);
     },
@@ -155,6 +193,9 @@ export function ImportScreen({ initialText }: { initialText?: string }) {
             <CsvFileInput
               onText={(t, name) => {
                 setSummary(null);
+                setSavedLines(new Set());
+                setSavedCounts(null);
+                setSavedRows(0);
                 run.reset();
                 setFileName(name);
                 setText(t);
@@ -207,7 +248,7 @@ export function ImportScreen({ initialText }: { initialText?: string }) {
 
       {run.isError ? (
         <Text tone="danger" accessibilityRole="alert">
-          {friendlyImportError(run.error)}
+          {friendlyImportError(run.error, savedRows)}
         </Text>
       ) : null}
 

@@ -139,8 +139,9 @@ export function makeRowSchema(branches: readonly ImportBranch[]) {
 
       let branchId = '';
       const b = resolveBranch(v.branch, branches);
-      if (b === null) bad(`Branch "${v.branch}" was not found`, 'branch');
-      else if (b === 'many') bad(`Branch "${v.branch}" matches more than one branch`, 'branch');
+      // Fixed text: a shifted row can put a phone or date of birth in this cell.
+      if (b === null) bad('Branch was not found', 'branch');
+      else if (b === 'many') bad('Branch matches more than one branch', 'branch');
       else branchId = b.id;
 
       let phone: string | null = null;
@@ -220,27 +221,48 @@ function duplicateKey(r: RosterRow): string {
  * phone (or, with no phone, the same name, branch and date of birth) is flagged `duplicate`.
  */
 export function parseRosterCsv(text: string, branches: readonly ImportBranch[]): ParsedRoster {
-  const parsed = Papa.parse<Record<string, string | undefined>>(text.replace(/^﻿/, ''), {
-    header: true,
-    skipEmptyLines: 'greedy',
-    transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, '_'),
-  });
+  // Parsed as plain records (no header mode) so the record index is the spreadsheet row, blank
+  // lines included (the header is row 1), and so Papa's error `row` uses the same index.
+  const parsed = Papa.parse<string[]>(text.replace(/^﻿/, ''), { delimiter: ',' });
+  const all = parsed.data;
 
-  const headers = parsed.meta.fields ?? [];
+  const headers = (all[0] ?? []).map((h) => h.trim().toLowerCase().replace(/\s+/g, '_'));
   const missing = REQUIRED_COLUMNS.filter((c) => !headers.includes(c));
   if (missing.length > 0) {
     return { fileErrors: [`Missing column: ${missing.join(', ')}`], rows: [] };
   }
-  if (parsed.data.length === 0) return { fileErrors: ['The file has no rows'], rows: [] };
-  if (parsed.data.length > MAX_ROWS) {
+
+  // A row with an unclosed quote has swallowed the rest of the file into one cell.
+  const unclosed = new Set<number>();
+  for (const err of parsed.errors) {
+    if (err.type === 'Quotes' && err.row !== undefined) unclosed.add(err.row);
+  }
+
+  const isBlank = (cells: string[]) => cells.every((v) => v.trim() === '');
+  const records = all
+    .map((cells, i) => ({ cells, line: i + 1, i }))
+    .filter(({ cells, i }) => i > 0 && (!isBlank(cells) || unclosed.has(i)));
+
+  if (records.length === 0) return { fileErrors: ['The file has no rows'], rows: [] };
+  if (records.length > MAX_ROWS) {
     return { fileErrors: [`The file has more than ${MAX_ROWS} rows. Split it up.`], rows: [] };
   }
 
   const schema = makeRowSchema(branches);
   const seen = new Map<string, number>();
-  const rows: PreviewRow[] = parsed.data.map((raw, i) => {
-    const line = i + 2;
+  const rows: PreviewRow[] = records.map(({ cells, line, i }) => {
+    const raw: Record<string, string | undefined> = {};
+    headers.forEach((h, k) => {
+      raw[h] = cells[k];
+    });
     const name = (raw.full_name ?? '').trim();
+    // Extra cells mean the row is shifted; it must never be imported.
+    if (unclosed.has(i)) {
+      return { line, status: 'error', name, errors: ['Row has an unclosed quote'] };
+    }
+    if (cells.length > headers.length && cells.slice(headers.length).some((v) => v.trim() !== '')) {
+      return { line, status: 'error', name, errors: ['Row has more cells than the header'] };
+    }
     const input: Record<string, string> = {};
     for (const c of ROSTER_COLUMNS) {
       const v = raw[c];

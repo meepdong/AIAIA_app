@@ -123,7 +123,20 @@ describe('parseRosterCsv', () => {
     );
     expect(rows.map((r) => r.row?.branch_id)).toEqual([BRANCH_B.id, BRANCH_A.id, undefined]);
     expect(rows[2]?.status).toBe('error');
-    expect(rows[2]?.errors[0]).toMatch(/Branch "Nowhere" was not found/);
+    expect(rows[2]?.errors).toEqual(['Branch was not found']);
+  });
+
+  it('never echoes a raw cell in a row error or the error report', () => {
+    // A shifted row: a phone number and a date of birth ended up in the branch column.
+    const { rows } = parseRosterCsv(
+      csv('Pooja Sampleton,,+91 98765 43210,,,,,,,', 'Rekha Mockford,,12/08/2012,,,,,,,'),
+      BRANCHES,
+    );
+    expect(rows.map((r) => r.status)).toEqual(['error', 'error']);
+    const report = buildErrorReportCsv(rows);
+    expect(report).toContain('Branch was not found');
+    expect(report).not.toMatch(/98765|43210|2012/);
+    expect(JSON.stringify(rows)).not.toMatch(/98765|43210|2012/);
   });
 
   it('checks every field, not only the phone and date', () => {
@@ -167,6 +180,43 @@ describe('parseRosterCsv', () => {
     );
     expect(fileErrors).toEqual([]);
     expect(rows.map((r) => r.status)).toEqual(['valid', 'error']);
+    // Blank line 2 is a spreadsheet row too: the people are on rows 3 and 4.
+    expect(rows.map((r) => r.line)).toEqual([3, 4]);
+  });
+
+  it('counts a multi-line quoted cell as one row', () => {
+    const { rows } = parseRosterCsv(
+      `${HEADER}\n"Uma Sampleton",,Branch A,,,,"line one\nline two",,,\nVeer Demokar,,Branch A,,,,,,,\n`,
+      BRANCHES,
+    );
+    expect(rows.map((r) => r.line)).toEqual([2, 3]);
+  });
+
+  it('marks a row with more cells than the header as an error and never imports it', () => {
+    const { rows } = parseRosterCsv(
+      csv(
+        'Wasim Fixture,+91 90000 00018,Branch A,,,,,,,',
+        'Xena Dummyson,+91 90000 00019,Branch A,,,,,,,,extra,more',
+      ),
+      BRANCHES,
+    );
+    expect(rows.map((r) => r.status)).toEqual(['valid', 'error']);
+    expect(rows[1]?.errors).toEqual(['Row has more cells than the header']);
+    expect(rows[1]?.line).toBe(3);
+    expect(toImportRows(rows)).toHaveLength(1);
+  });
+
+  it('marks a row with an unclosed quote as an error and never imports it', () => {
+    const { rows } = parseRosterCsv(
+      csv(
+        'Yash Sampleton,+91 90000 00020,Branch A,,,,,,,',
+        '"Zara Mockford,+91 90000 00021,Branch A,,,,,,,',
+      ),
+      BRANCHES,
+    );
+    expect(rows.map((r) => r.status)).toEqual(['valid', 'error']);
+    expect(rows[1]?.errors).toEqual(['Row has an unclosed quote']);
+    expect(toImportRows(rows)).toHaveLength(1);
   });
 
   it('refuses a file without the required columns or without rows', () => {

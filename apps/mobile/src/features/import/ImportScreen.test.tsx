@@ -1,4 +1,4 @@
-import type { Api } from '@aiaia/api';
+import { ImportPartialError, type Api } from '@aiaia/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
@@ -126,6 +126,30 @@ describe('import screen', () => {
     await fireEvent.press(await screen.findByText('Import 2 valid rows'));
     expect(await screen.findByText(/The import failed/)).toBeTruthy();
     expect(screen.queryByText(/9876543210/)).toBeNull();
+  });
+
+  it('after a partial failure says how many rows were saved and retries only the rest', async () => {
+    setPlatform('web');
+    const importRoster = jest
+      .fn()
+      .mockRejectedValueOnce(
+        new ImportPartialError({ code: 'XX000' }, 1, 1, { inserted: 1, updated: 0, skipped: 0 }),
+      )
+      .mockResolvedValueOnce({ inserted: 1, updated: 0, skipped: 0 });
+    await renderScreen(IMPORT, { importRoster });
+
+    await fireEvent.press(await screen.findByText('Import 2 valid rows'));
+    expect(await screen.findByText(/1 row was already saved; the rest were not/)).toBeTruthy();
+    // The saved row is gone from the pending sheet.
+    expect(await screen.findByText('1 ready')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('Import 1 valid row'));
+    await waitFor(() => expect(importRoster).toHaveBeenCalledTimes(2));
+    expect(importRoster.mock.calls[1]).toEqual([
+      [{ branch_id: BRANCH_B, full_name: 'Meera Mockford', phone: '+919000000003', dob: null }],
+    ]);
+    // The summary counts the saved batch and the retry together.
+    expect(await screen.findByText('Added: 2')).toBeTruthy();
   });
 });
 
