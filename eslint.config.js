@@ -11,6 +11,8 @@ module.exports = defineConfig([
     '**/ios/**',
     '**/coverage/**',
     '.worktrees/**',
+    // Deno Edge Functions: jsr:/npm: specifiers; checked by `deno test` (fn:test) and Prettier.
+    'supabase/functions/**',
     'packages/shared/src/db.types.ts',
   ]),
   expo,
