@@ -1,0 +1,35 @@
+{
+  "_comment": "The only person names allowed in supabase/seed.sql, supabase/seeds/ and supabase/tests/. Every word of a person's name must come from these lists. The surnames are invented so that no fixture matches a real member. Checked by scripts/check-seed-fake.mjs (pnpm check:seed).",
+  "first": [
+    "Aarav",
+    "Ananya",
+    "Arjun",
+    "Asha",
+    "Dev",
+    "Diya",
+    "Isha",
+    "Kabir",
+    "Karan",
+    "Leela",
+    "Meera",
+    "Neil",
+    "Nina",
+    "Priya",
+    "Ravi",
+    "Rohan",
+    "Samir",
+    "Tara",
+    "Vikram",
+    "Zoya"
+  ],
+  "last": [
+    "Demokar",
+    "Dummyson",
+    "Examplar",
+    "Fixture",
+    "Mockford",
+    "Placeholder",
+    "Sampleton",
+    "Testwala"
+  ]
+}

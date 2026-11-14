@@ -1,0 +1,8 @@
+nodeLinker: hoisted
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  '@parcel/watcher': false
+minimumReleaseAgeExclude:
+  - expo@58.0.25

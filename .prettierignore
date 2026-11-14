@@ -1,0 +1,15 @@
+node_modules
+.expo
+dist
+android
+ios
+coverage
+pnpm-lock.yaml
+.worktrees
+.claude
+docs
+packages/shared/src/db.types.ts
+AGENTS.md
+CLAUDE.md
+pnpm-workspace.yaml
+.scratch

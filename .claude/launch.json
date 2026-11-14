@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "mobile", "exec", "expo", "start", "--web", "--port", "8081"],
+      "port": 8081
+    },
+    {
+      "name": "build-status",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/build-status.mjs"],
+      "port": 4321,
+      "url": "http://127.0.0.1:4321"
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AIAIA Youth App: Pitch</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  :root {
+    --navy: #0b3d6e; --navy-2: #134e86; --gold: #c8962e; --gold-soft: #f6ecd9;
+    --ink: #1f2933; --muted: #52606d; --line: #d9e2ec; --tint: #f3f6fa; --white: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--white); }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.38; }
+  .page { width: 297mm; height: 210mm; padding: 11mm 12mm 10mm; overflow: hidden; position: relative; page-break-after: always; display: flex; flex-direction: column; gap: 4.2mm; }
+  .page:last-child { page-break-after: auto; }
+
+  /* header band */
+  .band { background: var(--navy); color: var(--white); border-radius: 6px; padding: 6mm 8mm; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--gold); }
+  .band h1 { margin: 0; font-size: 25pt; letter-spacing: 0.2px; line-height: 1.1; }
+  .band .tag { margin-top: 1.5mm; font-size: 11.5pt; color: #dbe7f3; }
+  .band .meta { text-align: right; font-size: 8.6pt; color: #c9d8e8; line-height: 1.5; }
+  .band.small { padding: 4mm 8mm; }
+  .band.small h1 { font-size: 17pt; }
+
+  h2 { margin: 0 0 1.6mm; font-size: 11.5pt; color: var(--navy); text-transform: uppercase; letter-spacing: 0.6px; }
+  h3 { margin: 0 0 1mm; font-size: 10pt; color: var(--navy); }
+  p { margin: 0; }
+  ul { margin: 0; padding-left: 4.2mm; }
+  li { margin: 0.6mm 0; }
+
+  .row { display: grid; gap: 4.2mm; }
+  .card { border: 1px solid var(--line); border-radius: 6px; padding: 4mm 4.5mm; background: var(--white); }
+  .card.tint { background: var(--tint); }
+  .card.navy { background: var(--navy); color: var(--white); border-color: var(--navy); }
+  .card.navy h2, .card.navy h3 { color: var(--gold-soft); }
+  .card.gold { background: var(--gold-soft); border-color: #ead9b8; }
+
+  .lead { font-size: 11pt; line-height: 1.42; }
+  .lead strong { color: var(--navy); }
+
+  /* feature tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.2mm; }
+  .tile { border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 5px; padding: 3mm 3.4mm; background: var(--white); }
+  .tile .n { display: inline-block; width: 5.2mm; height: 5.2mm; border-radius: 50%; background: var(--navy); color: var(--white); font-size: 7.6pt; font-weight: 700; text-align: center; line-height: 5.2mm; margin-right: 1.6mm; vertical-align: 1px; }
+  .tile h3 { display: inline; font-size: 10pt; }
+  .tile p { margin-top: 1.2mm; color: var(--muted); font-size: 8.9pt; line-height: 1.34; }
+  .tile.new { border-top-color: var(--navy); }
+  .badge { display: inline-block; font-size: 6.8pt; font-weight: 700; color: var(--navy); background: var(--gold-soft); border-radius: 3px; padding: 0 1.4mm; margin-left: 1.2mm; vertical-align: 1px; letter-spacing: 0.3px; }
+
+  /* stats strip */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.2mm; }
+  .stat { background: var(--navy); color: var(--white); border-radius: 5px; padding: 2.6mm 4mm; display: flex; align-items: baseline; gap: 2.4mm; }
+  .stat b { font-size: 17pt; color: var(--gold-soft); line-height: 1; }
+  .stat span { font-size: 8.8pt; color: #dbe7f3; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 8.9pt; }
+  td { padding: 1.3mm 1.6mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:last-child { text-align: right; white-space: nowrap; font-weight: 600; }
+  tr.total td { border-top: 2px solid var(--navy); border-bottom: none; font-weight: 700; color: var(--navy); }
+
+  /* roadmap */
+  .road { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; }
+  .step { padding: 0 3mm 0 0; position: relative; }
+  .step .dot { width: 4.6mm; height: 4.6mm; border-radius: 50%; background: var(--gold); border: 2px solid var(--white); box-shadow: 0 0 0 1px var(--gold); margin-bottom: 1.8mm; position: relative; z-index: 2; }
+  .step.launch .dot { background: var(--navy); box-shadow: 0 0 0 1px var(--navy); }
+  .road::before { content: ""; position: absolute; left: 2.3mm; right: 6mm; top: 2.3mm; height: 1.4px; background: #cdb68a; z-index: 1; }
+  .step h3 { font-size: 9.6pt; }
+  .step p { font-size: 8.6pt; color: var(--muted); line-height: 1.32; }
+  .who { font-size: 7.6pt; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.4px; }
+
+  .checks li { list-style: none; position: relative; padding-left: 4.4mm; margin-left: -4.2mm; }
+  .checks li::before { content: ""; position: absolute; left: 0; top: 1.3mm; width: 2.4mm; height: 2.4mm; border: 1.4px solid var(--navy); border-radius: 2px; }
+  .card.navy .safe li { margin: 0.9mm 0; }
+  .card.navy .safe li::marker { color: var(--gold); }
+
+  .foot { position: absolute; left: 12mm; right: 12mm; bottom: 3.4mm; display: flex; justify-content: space-between; font-size: 7.6pt; color: var(--muted); }
+
+  /* page 2 compaction */
+  .p2 { gap: 3.0mm; font-size: 9.2pt; line-height: 1.32; }
+  .p2 .card { padding: 3.4mm 4.2mm; }
+  .p2 li { margin: 0.45mm 0; }
+  .p2 h2 { font-size: 10.6pt; margin-bottom: 1.3mm; }
+  .p2 td { padding: 1.05mm 1.5mm; }
+  .fine { margin-top: 1.3mm; font-size: 8.1pt; color: var(--muted); line-height: 1.3; }
+  .decide { background: var(--navy); border-color: var(--navy); color: var(--white); padding: 3.2mm 4.2mm; }
+  .decide h2 { color: var(--gold-soft); }
+  .dgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; font-size: 8.8pt; line-height: 1.32; color: #dbe7f3; }
+  .dgrid b { color: var(--white); }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 ============================ -->
+<section class="page">
+  <div class="band">
+    <div>
+      <h1>AIAIA Youth App</h1>
+      <div class="tag">One app to bring every Anglo-Indian youth in India together</div>
+    </div>
+    <div class="meta">All India Anglo-Indian Association · Youth Wing<br>Proposal for the National Youth Committee &amp; Governing Body<br>November 2026</div>
+  </div>
+
+  <div class="row" style="grid-template-columns: 1fr 1.55fr;">
+    <div class="card tint">
+      <h2>Today</h2>
+      <ul>
+        <li>Member records are on <b>paper</b>, spread across 30+ branches.</li>
+        <li>Dues and event fees are tracked by hand. Receipts get lost.</li>
+        <li>Registrations and updates are scattered across many WhatsApp groups.</li>
+        <li>A member who moves cities can't easily prove membership to a new branch.</li>
+        <li>Certificates and event photos sit in folders and old magazines.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>The idea</h2>
+      <p class="lead">
+        <strong>One app, on Android phones and any web browser.</strong>
+        You join with just your mobile number; there are no passwords. Your branch approves you, and then
+        <strong>everything is in one place</strong>: members, events, payments, certificates, photos and official news.
+      </p>
+      <p class="lead" style="margin-top:2mm;">
+        It's built <strong>for our youth first, with safety for under-18s built in</strong>, and it's ready to grow to serve the whole of AIAIA.
+      </p>
+    </div>
+  </div>
+
+  <div>
+    <h2>What members get</h2>
+    <div class="tiles">
+      <div class="tile"><span class="n">1</span><h3>Join &amp; get approved</h3>
+        <p>A phone code, a short profile, then a waiting room until your branch approves you. Paper lists are loaded in, so existing members are approved quickly.</p></div>
+      <div class="tile"><span class="n">2</span><h3>Member directory</h3>
+        <p>Find each other by name, branch, city or profession. Every member chooses what others can see.</p></div>
+      <div class="tile"><span class="n">3</span><h3>Events &amp; delegate pass</h3>
+        <p>Register yourself and your children, and get reminders. A QR pass, which can be printed, is scanned at the door, even without internet.</p></div>
+      <div class="tile"><span class="n">4</span><h3>Digital member ID</h3>
+        <p>Any branch can verify it. Moving for studies or work? Request a branch transfer in the app.</p></div>
+      <div class="tile"><span class="n">5</span><h3>Payments &amp; receipts</h3>
+        <p>Pay dues, fees and donations by UPI or card, or in cash at your branch or the NYM desk. <b>Receipts are sent automatically.</b></p></div>
+      <div class="tile"><span class="n">6</span><h3>Certificates</h3>
+        <p>They appear in your app straight after an event. Download them any time; a QR proves each one is genuine.</p></div>
+      <div class="tile"><span class="n">7</span><h3>Gallery &amp; <i>Review</i> archive</h3>
+        <p>Curated event photos and videos, plus past issues of the <i>Review</i> magazine, for members only.</p></div>
+      <div class="tile"><span class="n">8</span><h3>Official updates</h3>
+        <p>News from the verified "AIAIA" WhatsApp account, plus free app alerts. Jobs, quizzes, polls and mentorship come after launch.</p></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>600</b><span>youth members today</span></div>
+    <div class="stat"><b>30+</b><span>branches across India</span></div>
+    <div class="stat"><b>10,000</b><span>members it is built to handle</span></div>
+    <div class="stat"><b>~₹12k</b><span>a year to run (servers on free plans)</span></div>
+  </div>
+
+  <div class="foot"><span>AIAIA Youth App · Pitch</span><span>1 / 2</span></div>
+</section>
+
+<!-- ============================ PAGE 2 ============================ -->
+<section class="page p2">
+  <div class="band small">
+    <h1>Safe, simple and affordable</h1>
+    <div class="meta">The full details are in the separate <b>Technical Sheet</b> and <b>Proposal</b>.</div>
+  </div>
+
+  <div class="row" style="grid-template-columns: 1.2fr 1fr 1fr;">
+    <div class="card navy">
+      <h2>Built safe for young members</h2>
+      <ul class="safe">
+        <li><b>Ages 14–17:</b> a parent's agreement is confirmed by the branch. <b>Under 14:</b> children join through a parent's account.</li>
+        <li><b>Parents get a WhatsApp alert</b> when their child arrives at an event.</li>
+        <li>Each event has a <b>safety lead</b>, with a list of the minors attending and their parents' contacts.</li>
+        <li>A minor's phone number and birthday are <b>never shown</b> to other members.</li>
+        <li><b>At 18,</b> the account passes to the member, who gives their own consent. Parent access ends.</li>
+        <li>Anyone can report a concern. A <b>Voluntary Enforcement Committee</b> acts on it.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Your data, protected</h2>
+      <ul>
+        <li>Member records, photos and backups are <b>stored in India</b> (Mumbai and Bangalore).</li>
+        <li>Only <b>approved members</b> see member information. Officers handle only their own branch.</li>
+        <li><b>Every admin action is recorded.</b> Only a committee can block an account.</li>
+        <li>Members can see, correct or delete their data. Closed accounts are removed after <b>6 months</b>.</li>
+        <li>The code is <b>open source</b>; member data and keys are never in it.</li>
+      </ul>
+    </div>
+    <div class="card tint">
+      <h2>What we need from AIAIA</h2>
+      <ul class="checks">
+        <li>Permission to run under AIAIA's registration (documents, PAN, bank account).</li>
+        <li>A free <b>D-U-N-S number</b> (for Google Play) and <b>WhatsApp business verification</b>.</li>
+        <li>Policy details (address, refund rules, dues) and the names of the people who will hold each role.</li>
+        <li>Certificate designs, <i>Review</i> photos and videos, paper member lists, the official branch list.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="row" style="grid-template-columns: 1fr 1.3fr;">
+    <div class="card">
+      <h2>What it costs (approx. per year)</h2>
+      <table>
+        <tr><td>Database, hosting, app builds, notifications</td><td>₹0</td></tr>
+        <tr><td>Photo, file &amp; backup storage in India</td><td>~₹6,200</td></tr>
+        <tr><td>WhatsApp: login codes, updates, parent alerts, receipts</td><td>~₹3,000–3,500</td></tr>
+        <tr><td>SIM for the official WhatsApp number</td><td>~₹2,000</td></tr>
+        <tr><td>Website address; email (AIAIA's existing account)</td><td>~₹0–1,000</td></tr>
+        <tr class="total"><td>Total</td><td>~₹11,000–12,500</td></tr>
+      </table>
+      <p class="fine">Plus ₹2,100 once for Google Play. Online payments cost ~2%, which can be added to the payer's amount. <b>Later:</b> an iPhone app (~₹8,300/yr, via a sponsor or waiver) and a bigger server plan at 5,000+ users.</p>
+    </div>
+    <div class="card gold">
+      <h2>How we roll it out</h2>
+      <div class="road">
+        <div class="step"><div class="dot"></div><div class="who">Testers</div><h3>1 · Getting everyone in</h3>
+          <p>Joining, approvals, directory, events, passes and check-in, member ID, parent alerts, admin website.</p></div>
+        <div class="step"><div class="dot"></div><div class="who">Testers</div><h3>2 · Money &amp; memories</h3>
+          <p>Payments and receipts, certificates, gallery and <i>Review</i> archive, WhatsApp updates.</p></div>
+        <div class="step launch"><div class="dot"></div><div class="who" style="color:var(--navy)">Everyone</div><h3>Public launch</h3>
+          <p>Once tested and approved, it goes live on the Play Store and the web under AIAIA's name.</p></div>
+        <div class="step"><div class="dot"></div><div class="who">Everyone</div><h3>3 · Growing together</h3>
+          <p>Jobs board, quizzes, polls, mentorship, documents, birthday wishes.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card decide">
+    <h2>Decisions for the committee</h2>
+    <div class="dgrid">
+      <div><b>1 · Payments</b><br>Where does the money go: one central account, or each branch's account?</div>
+      <div><b>2 · Refunds</b><br>What are the rules for dues, event fees and donations?</div>
+      <div><b>3 · Legal check</b><br>A lawyer reviews the consent process for 14–17s and the privacy policy.</div>
+      <div><b>4 · Licence &amp; iPhone</b><br>The open-source licence (AGPL recommended), and how the iPhone app is funded.</div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AIAIA Youth App · Pitch</span><span>2 / 2</span></div>
+</section>
+
+</body>
+</html>

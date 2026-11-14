@@ -1,0 +1,41 @@
+{
+  "name": "aiaia-youth-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AIAIA Youth App: Expo (Android, web, admin console) on Supabase",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "jest",
+    "db:start": "node scripts/db-start.mjs",
+    "db:stop": "node scripts/db-stop.mjs",
+    "db:reset": "node scripts/db-reset.mjs",
+    "db:test": "node scripts/db-test.mjs",
+    "db:types": "node scripts/db-types.mjs",
+    "fn:serve": "node scripts/not-set-up.mjs fn:serve P0-02/P0-03",
+    "fn:test": "node scripts/not-set-up.mjs fn:test P0-02/P0-03",
+    "check:seed": "node scripts/check-seed-fake.mjs",
+    "web:build": "pnpm --filter mobile exec expo export -p web",
+    "e2e:web": "node scripts/not-set-up.mjs e2e:web P1-10",
+    "android:apk": "node scripts/not-set-up.mjs android:apk P0-03"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
+    "babel-preset-expo": "^58.0.25",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^58.0.4",
+    "eslint-config-prettier": "^10.1.8",
+    "jest": "^30.5.2",
+    "jest-expo": "^58.0.14",
+    "prettier": "^3.10.0",
+    "react-test-renderer": "19.3.0",
+    "typescript": "~6.0.3"
+  }
+}

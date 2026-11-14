@@ -1,0 +1,34 @@
+# Agent worktrees and scratch (orchestrator creates .worktrees/<ID>)
+.worktrees/
+
+# Local Claude settings and per-machine config
+.claude/settings.local.json
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+aiaia-backup.key
+
+# Dependencies and builds (P0-01 extends this list)
+node_modules/
+.expo/
+dist/
+android/
+ios/
+supabase/.temp/
+coverage/
+
+# Python caches (docs/tools)
+__pycache__/
+
+# Expo / Metro (P0-01)
+web-build/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+npm-debug.*
+yarn-error.*
+.DS_Store
