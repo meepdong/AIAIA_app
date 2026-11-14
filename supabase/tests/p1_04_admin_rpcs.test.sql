@@ -3,7 +3,7 @@
 -- no member_private row and so no DOB on record (…072), two test-only branch roles carrying
 -- data.export (one with members.approve, one without), notify_dispatch_secret.
 begin;
-select plan(137);
+select plan(138);
 
 create temp table t_ids (k text primary key, v uuid);
 grant all on t_ids to authenticated;
@@ -331,6 +331,8 @@ select ok((select value = '5'::jsonb and not is_secret and not editable from pub
 select throws_ok($$ select public.admin_set_setting('test_unlisted_setting', '6') $$, '42501', null,
   'set setting: a non-secret key off the allowlist is refused');
 
+select throws_ok($$ select public.admin_set_setting('adult_handover_grace_days', '30.0') $$, '22023', null,
+  'set setting: a decimal form of a whole number (30.0) is refused');
 select lives_ok($$ select public.admin_set_setting('adult_handover_grace_days', '30') $$, 'set setting: grace days 30 is accepted');
 select throws_ok($$ select public.admin_set_setting('adult_handover_grace_days', '366') $$, '22023', null,
   'set setting: grace days 366 is refused');

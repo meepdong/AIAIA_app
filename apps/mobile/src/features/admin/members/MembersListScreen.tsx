@@ -75,6 +75,8 @@ export function MembersListScreen({ onOpenMember, initialStatus, pageSize }: Pro
     : 'Export all members (CSV)';
   const exporter = useMutation({
     mutationFn: async () => {
+      // Refuse before fetching: no member rows or contact fields are loaded off the web console.
+      if (Platform.OS !== 'web') throw new Error('CSV export is available on the web console only');
       if (scope.kind !== 'ok') throw new Error('no export scope');
       const rows = await api.exportMembers({ branchId: scope.branchId });
       await deliverCsv('aiaia-members.csv', buildMembersCsv(rows));

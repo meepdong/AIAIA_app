@@ -273,11 +273,10 @@ declare
   t text := jsonb_typeof(v);
   n numeric;  -- v as a whole number, or null
 begin
-  if t = 'number' then
+  -- Whole numbers only, written as plain integer text: '30.0' or '1e1' would break later
+  -- readers that cast with (value #>> '{}')::int.
+  if t = 'number' and v::text ~ '^-?[0-9]{1,9}$' then
     n := v::text::numeric;
-    if n <> trunc(n) then
-      n := null;
-    end if;
   end if;
 
   case k
