@@ -66,14 +66,14 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P1-00b | Membership & roles RPCs | done | — | merged e05b60c (local) | Security review: changes required, then 3 fix rounds (claim-code rate limit and 8-character codes, helper privilege pins, no self-assigned roles, generic info-request body, DOB lock for dependents, active-guardian filters). 626 tests on the branch |
 | P1-00c | Content & operations RPCs | done | — | merged 8c4b6cd (local) | Security review: pass with minors, all 7 fixed in 1 round. At merge, `p1_00c_reports` switched from a stub to the real `block_member` (pinned). Main: 941 DB tests |
 | P1-01 | Phone OTP auth | done | (real OTP: B1/B2 B3) | merged 0f7b986 (local) | 2 security rounds (hook JSON replies, atomic throttle RPC, verify_jwt, lock pinned); E2E with the hook on: GoTrue surfaced 502/429; web login with test number verified |
-| P1-02 | Profile, minors, guardians, waiting room | todo | — | | |
+| P1-02 | Profile, minors, guardians, waiting room | in-progress | — | feat/P1-02 | Stack: default aiaia-app (543xx) |
 | P1-03 | Approvals | todo | B4 | | |
 | P1-04 | Admin shell, members, roles, audit | done | B4 | merged 494f63d (local) | Opus security review (upgraded: export RPC) + re-review; adds migration p1_04_admin_rpcs (branch move, audited export, settings allowlist). Export is web-only |
 | P1-05 | Directory | done | — | merged 7cb9bf6 (local) | Review PASS WITH MINORS; 1 fix round (report-limit message, load-more error, filter test). Turns `app/(app)/_layout.tsx` into Tabs. Main: 94 app tests |
 | P1-06 | Notifications, push, web push, PWA | todo | A3 | | |
 | P1-07a | Events, RSVP, reminders | done | — | merged 0815a6d (local) | Review CHANGES REQUIRED (duties dead end) then 2 fix rounds; reminders cron, reschedule reset, waitlist/cancel notices. Main: db 1184, deno 23, jest 296 |
-| P1-07b | Delegate passes & offline check-in | todo | — | | |
-| P1-08 | Roster import/export | todo | — | | |
+| P1-07b | Delegate passes & offline check-in | in-progress | — | feat/P1-07b | Own stack aiaia-app-b (544xx) |
+| P1-08 | Roster import/export | in-progress | — | feat/P1-08 | Own stack aiaia-app-c (545xx) |
 | P1-09 | Public website & policy pages | done | (approval: C2) | merged 710841e (local) | Review PASS WITH MINORS, fixed. `[TO BE PROVIDED BY AIAIA]` placeholders in docs/legal/ await C2; flip `app_settings.legal_approved` to true when approved |
 | P1-10 | E2E + tester release | todo | B1/B2 | | Runs last in Phase 1 |
 | P1-11 | Reporting & enforcement | todo | B4 | | |
@@ -102,7 +102,7 @@ Allowed values: `todo`, `in-progress`, `review`, `done`. The Owner gate column l
 | P3-05 | Document library | todo | D | | |
 | P3-06 | Birthday shout-outs | todo | — | | |
 
-**Next wave:** waves 0a, 0b, 1b and 1c are complete, apart from P0-03. Main is green at 494f63d: lint, typecheck, `test` (296), `check:seed`, `db:reset`, `db:test` (1184), deno function tests (23) and `web:build` pass, and a test-number web login was checked in the browser. Next feature wave (1d): **P1-02 ∥ P1-06 ∥ P1-07b ∥ P1-08**. P0-03 still needs owner items A4/A5. The target dates are in [`06-timeline.md`](06-timeline.md).
+**Next wave:** waves 0a, 0b, 1b and 1c are complete, apart from P0-03. Main is green at 494f63d: lint, typecheck, `test` (296), `check:seed`, `db:reset`, `db:test` (1184), deno function tests (23) and `web:build` pass, and a test-number web login was checked in the browser. Wave 1d is in progress: **P1-02 ∥ P1-07b ∥ P1-08**. **P1-06 waits on owner item A3 (Expo + Firebase).** P0-03 still needs owner items A4/A5. The target dates are in [`06-timeline.md`](06-timeline.md).
 
 ### TODO: team onboarding (2026-11-14)
 
