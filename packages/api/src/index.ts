@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@aiaia/shared';
+import { createAuthApi } from './auth';
 
 /**
  * Shared touch point. All server access goes through this package.
@@ -12,6 +13,7 @@ export type Client = SupabaseClient<Database>;
 export function createApi(client: Client) {
   return {
     // feature registrations go here
+    auth: createAuthApi(client),
     _client: client,
   };
 }
