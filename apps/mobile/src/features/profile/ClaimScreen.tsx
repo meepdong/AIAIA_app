@@ -3,7 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
-import { homeRouteFor, stateForMembership } from '@/lib/session';
+import { homeRouteFor, stateForMembership, useRefreshMembership } from '@/lib/session';
 
 const CODE_LENGTH = 8;
 
@@ -11,6 +11,7 @@ const CODE_LENGTH = 8;
 export function ClaimScreen() {
   const { profile } = useApi();
   const router = useRouter();
+  const refreshMembership = useRefreshMembership();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -28,11 +29,12 @@ export function ClaimScreen() {
       setError(result.message);
       return;
     }
-    await profile.refreshSession();
-    const state = stateForMembership({
-      status: result.status,
-      adultConsentRequired: result.adultConsentRequired,
-    });
+    const state =
+      (await refreshMembership()) ??
+      stateForMembership({
+        status: result.status,
+        adultConsentRequired: result.adultConsentRequired,
+      });
     router.replace(homeRouteFor(state) as Href);
   };
 

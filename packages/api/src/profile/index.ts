@@ -4,6 +4,9 @@ import type {
   SubmitApplicationResult,
 } from '@aiaia/shared/src/schemas/membership';
 import type { Client } from '../index';
+import { createManageMethods } from './manage';
+
+export type { InfoRequest, ManageFailure } from './manage';
 
 /** Friendly failure for the profile screens. `message` is safe to show as is. */
 export type ProfileErrorKind =
@@ -136,6 +139,8 @@ function invalidCodeMessage(): string {
  */
 export function createProfileApi(client: Client) {
   return {
+    ...createManageMethods(client),
+
     /** Creates (or updates, while pending) the caller's application. */
     async submitApplication(payload: SubmitApplicationPayload): Promise<SubmitResult> {
       try {

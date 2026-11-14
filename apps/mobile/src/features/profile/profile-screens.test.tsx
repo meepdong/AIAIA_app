@@ -14,6 +14,12 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+const mockRefreshMembership = jest.fn();
+jest.mock('@/lib/session', () => ({
+  ...jest.requireActual('@/lib/session'),
+  useRefreshMembership: () => mockRefreshMembership,
+}));
+
 const mockStore = {
   load: jest.fn(),
   save: jest.fn(),
@@ -96,6 +102,8 @@ beforeEach(() => {
   mockStore.load.mockResolvedValue(null);
   mockProfile.userId.mockResolvedValue('user-1');
   mockProfile.refreshSession.mockResolvedValue(undefined);
+  mockRefreshMembership.mockReset();
+  mockRefreshMembership.mockResolvedValue(null);
   mockDirectory.branches.mockResolvedValue([{ id: BRANCH, name: 'Pune Branch' }]);
 });
 
@@ -170,7 +178,7 @@ describe('profile setup screen', () => {
       }),
     );
     expect(mockStore.clear).toHaveBeenCalled();
-    expect(mockProfile.refreshSession).toHaveBeenCalled();
+    expect(mockRefreshMembership).toHaveBeenCalled();
     await waitFor(() => expect(screen).toHavePathname('/waiting-room'));
     expect(screen).toHavePathname('/waiting-room');
   });
@@ -255,7 +263,7 @@ describe('claim screen', () => {
     });
     await enter('AB3DEF9H');
     await waitFor(() => expect(screen).toHavePathname('/waiting-room'));
-    expect(mockProfile.refreshSession).toHaveBeenCalled();
+    expect(mockRefreshMembership).toHaveBeenCalled();
     expect(screen).toHavePathname('/waiting-room');
   });
 });

@@ -1,4 +1,8 @@
-import type { PrivacyFlags, SubmitApplicationPayload } from '@aiaia/shared/src/schemas/membership';
+import type {
+  MyProfileResult,
+  PrivacyFlags,
+  SubmitApplicationPayload,
+} from '@aiaia/shared/src/schemas/membership';
 import { bandForDob, type AgeBand } from './age';
 
 export const STEPS = ['About you', 'Contact & work', 'Photo', 'Consents'] as const;
@@ -172,6 +176,32 @@ export function parseDraft(raw: string): ProfileDraft | null {
       const value = (privacy as Record<string, unknown>)[key];
       if (typeof value === 'boolean') draft.privacy[key] = value;
     }
+  }
+  return draft;
+}
+
+const asText = (v: unknown) => (typeof v === 'string' ? v : '');
+
+/** Builds a draft from `my_profile()` so a pending applicant can edit what they submitted. */
+export function draftFromProfile(profile: MyProfileResult): ProfileDraft {
+  const { member, private: priv } = profile;
+  const draft = emptyDraft();
+  draft.fullName = member.full_name;
+  draft.branchId = member.branch_id;
+  draft.dob = priv?.dob ?? '';
+  draft.gender = asText(member.gender);
+  draft.city = asText(member.city);
+  draft.occupation = asText(member.occupation);
+  draft.education = asText(member.education);
+  draft.emergencyName = asText(priv?.emergency_contact_name);
+  draft.emergencyPhone = asText(priv?.emergency_contact_phone).replace(/^\+91/, '');
+  draft.email = asText(priv?.email);
+  const prefs = (priv?.notify_prefs ?? {}) as Record<string, unknown>;
+  draft.whatsappOptIn = prefs.whatsapp === true;
+  draft.emailUpdatesOptIn = prefs.email_updates === true;
+  const privacy = (member.privacy ?? {}) as Record<string, unknown>;
+  for (const key of Object.keys(DEFAULT_PRIVACY) as PrivacyKey[]) {
+    if (typeof privacy[key] === 'boolean') draft.privacy[key] = privacy[key] as boolean;
   }
   return draft;
 }

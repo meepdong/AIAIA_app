@@ -30,5 +30,6 @@ export function createApi(client: Client) {
 }
 
 export type Api = ReturnType<typeof createApi>;
+export type { InfoRequest } from './profile';
 export * from './events';
 export * from './admin';

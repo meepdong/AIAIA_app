@@ -3,6 +3,7 @@ import { Link, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { useApi } from '@/features/auth/useApi';
+import { useRefreshMembership } from '@/lib/session';
 import { AGE_COPY } from './age';
 import { clearDraft, loadDraft, saveDraft } from './draft-store';
 import {
@@ -25,7 +26,7 @@ const GENDERS = [
   { label: 'Prefer not to say', value: 'prefer_not_to_say' },
 ] as const;
 
-const PRIVACY_TOGGLES: { key: PrivacyKey; label: string }[] = [
+export const PRIVACY_TOGGLES: { key: PrivacyKey; label: string }[] = [
   { key: 'show_phone', label: 'Show my phone number to other members' },
   { key: 'show_email', label: 'Show my email to other members' },
   { key: 'show_city', label: 'Show my city in the directory' },
@@ -33,7 +34,7 @@ const PRIVACY_TOGGLES: { key: PrivacyKey; label: string }[] = [
   { key: 'show_photo', label: 'Show my photo in the directory' },
 ];
 
-function ToggleRow({
+export function ToggleRow({
   label,
   value,
   onChange,
@@ -51,11 +52,23 @@ function ToggleRow({
 }
 
 /** Profile setup: four steps, with the draft kept on the device until the application is sent. */
-export function ProfileSetupScreen() {
+export function ProfileSetupScreen({
+  initial,
+  onDone,
+  heading = 'Set up your profile',
+  onCancel,
+}: {
+  /** Edit an existing application (waiting room): no device draft, `onDone` runs after a save. */
+  initial?: ProfileDraft;
+  onDone?: () => void | Promise<void>;
+  heading?: string;
+  onCancel?: () => void;
+} = {}) {
   const { profile, directory } = useApi();
   const router = useRouter();
-  const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
-  const [ready, setReady] = useState(false);
+  const refreshMembership = useRefreshMembership();
+  const [draft, setDraft] = useState<ProfileDraft>(() => initial ?? emptyDraft());
+  const [ready, setReady] = useState(Boolean(initial));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [branches, setBranches] = useState<{ label: string; value: string }[]>([]);
   const [branchError, setBranchError] = useState(false);
@@ -66,13 +79,14 @@ export function ProfileSetupScreen() {
 
   useEffect(() => {
     let live = true;
-    void (async () => {
-      owner.current = await profile.userId();
-      const saved = owner.current ? await loadDraft(owner.current) : null;
-      if (!live) return;
-      if (saved) setDraft(saved);
-      setReady(true);
-    })();
+    if (!initial)
+      void (async () => {
+        owner.current = await profile.userId();
+        const saved = owner.current ? await loadDraft(owner.current) : null;
+        if (!live) return;
+        if (saved) setDraft(saved);
+        setReady(true);
+      })();
     directory
       .branches()
       .then((rows) => live && setBranches(rows.map((b) => ({ label: b.name, value: b.id }))))
@@ -80,7 +94,7 @@ export function ProfileSetupScreen() {
     return () => {
       live = false;
     };
-  }, [profile, directory]);
+  }, [profile, directory, initial]);
 
   const update = useCallback((patch: Partial<ProfileDraft>) => {
     setDraft((current) => {
@@ -123,8 +137,12 @@ export function ProfileSetupScreen() {
       setSubmitError(result.message);
       return;
     }
+    if (onDone) {
+      await onDone();
+      return;
+    }
     await clearDraft();
-    await profile.refreshSession();
+    await refreshMembership();
     router.replace('/waiting-room');
   };
 
@@ -134,7 +152,7 @@ export function ProfileSetupScreen() {
     <Screen>
       <View style={{ maxWidth: 520, width: '100%', alignSelf: 'center', gap: 16 }}>
         <Text variant="title" accessibilityRole="header">
-          Set up your profile
+          {heading}
         </Text>
         <Text tone="textMuted">
           Step {step + 1} of {STEPS.length}: {STEPS[step]}
@@ -275,6 +293,9 @@ export function ProfileSetupScreen() {
               onPress={() => update({ step: step - 1 })}
               disabled={submitting}
             />
+          ) : null}
+          {onCancel ? (
+            <Button title="Cancel" variant="ghost" onPress={onCancel} disabled={submitting} />
           ) : null}
           {step < LAST_STEP ? (
             <Button title="Next" onPress={next} />
