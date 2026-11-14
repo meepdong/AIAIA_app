@@ -16,6 +16,12 @@ const cases: { name: string; file: string; code: string; flagged: boolean }[] = 
   { name: 'a feature importing @/lib/supabase', file: feature, code: client, flagged: true },
   { name: 'a feature importing the SDK', file: feature, code: sdk, flagged: true },
   { name: 'a feature using a relative path', file: feature, code: relative, flagged: true },
+  {
+    name: 'a component importing @/lib/supabase',
+    file: 'apps/mobile/src/components/Fixture.tsx',
+    code: client,
+    flagged: true,
+  },
   { name: 'a route importing @/lib/supabase', file: route, code: client, flagged: true },
   { name: 'a route importing the SDK', file: route, code: sdk, flagged: true },
   {

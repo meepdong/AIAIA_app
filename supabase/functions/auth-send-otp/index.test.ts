@@ -146,6 +146,8 @@ Deno.test('WhatsApp success returns 200 and sends the code to the +91 number', a
   const { handler, whatsappCalls, msg91Calls, rows } = build();
   const response = await handler(await signedRequest(hookPayload()));
   assertEquals(response.status, 200);
+  assert(response.headers.get('content-type')?.startsWith('application/json'));
+  assertEquals(await response.json(), {});
   assertEquals(whatsappCalls, [{ to: '+919000000001', code: OTP }]);
   assertEquals(msg91Calls.length, 0);
   assertEquals(rows.length, 1);
@@ -167,7 +169,8 @@ Deno.test('the 6th send within an hour is refused with 429', async () => {
     assertEquals((await handler(await signedRequest(hookPayload()))).status, 200);
   }
   const sixth = await handler(await signedRequest(hookPayload()));
-  assertEquals(sixth.status, 429);
+  assertEquals(sixth.status, 200);
+  assert(sixth.headers.get('content-type')?.startsWith('application/json'));
   const body = await sixth.json();
   assertEquals(body.error.http_code, 429);
   assertStringIncludes(body.error.message, 'Try again in 60 minutes');
@@ -194,9 +197,11 @@ Deno.test('the 11th send within a day is refused even when spaced out hourly', a
     sendWhatsApp: () => Promise.resolve({ ok: true, status: 200 }),
   });
   const response = await handler(await signedRequest(hookPayload()));
-  assertEquals(response.status, 429);
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.error.http_code, 429);
   // Retry when the oldest of the ten (18h05m ago) ages out of the day: 5h55m from now.
-  assertStringIncludes((await response.json()).error.message, 'Try again in 355 minutes');
+  assertStringIncludes(body.error.message, 'Try again in 355 minutes');
   assertEquals(mem.rows.length, 10);
 });
 
@@ -232,7 +237,8 @@ Deno.test('the Postgres store makes one otp_throttle_take call and maps its answ
 Deno.test('non +91 numbers are rejected unless international is allowed', async () => {
   const blocked = build();
   const refused = await blocked.handler(await signedRequest(hookPayload('14155550100')));
-  assertEquals(refused.status, 400);
+  assertEquals(refused.status, 200);
+  assertEquals((await refused.json()).error.http_code, 400);
   assertEquals(blocked.whatsappCalls.length, 0);
   assertEquals(blocked.rows.length, 0);
 
@@ -258,12 +264,15 @@ Deno.test('with WhatsApp not configured the code goes to MSG91', async () => {
 });
 
 Deno.test('when every provider fails the answer is 502', async () => {
-  const { handler } = build({
+  const { handler, rows } = build({
     sendWhatsApp: () => Promise.resolve({ ok: false, status: 500 }),
     sendMsg91: () => Promise.resolve({ ok: false, status: 0 }),
   });
   const response = await handler(await signedRequest(hookPayload()));
-  assertEquals(response.status, 502);
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).error.http_code, 502);
+  // Counted before sending: exactly one throttle take, even though nothing was delivered.
+  assertEquals(rows.length, 1);
 });
 
 Deno.test('old throttle rows are purged opportunistically', async () => {

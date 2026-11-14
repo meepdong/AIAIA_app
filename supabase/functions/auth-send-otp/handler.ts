@@ -38,10 +38,20 @@ export interface HandlerDeps {
   random?: () => number;
 }
 
-function errorResponse(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: { http_code: status, message } }), {
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+function okResponse(): Response {
+  return new Response('{}', { status: 200, headers: JSON_HEADERS });
+}
+
+// GoTrue's hook runner reads {error:{http_code,message}} only from a 2xx application/json reply,
+// so every refusal except a bad signature goes out as HTTP 200. The signature failure stays a
+// real 401: that caller is not GoTrue.
+function errorResponse(httpCode: number, message: string): Response {
+  const status = httpCode === 401 || httpCode === 405 ? httpCode : 200;
+  return new Response(JSON.stringify({ error: { http_code: httpCode, message } }), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: JSON_HEADERS,
   });
 }
 
@@ -119,12 +129,12 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
 
     if (deps.sendWhatsApp) {
       const result = await deps.sendWhatsApp(phone, code);
-      if (result.ok) return new Response('{}', { status: 200 });
+      if (result.ok) return okResponse();
       console.error(`auth-send-otp: whatsapp failed (status ${result.status})`);
     }
     if (deps.sendMsg91) {
       const result = await deps.sendMsg91(phone, code);
-      if (result.ok) return new Response('{}', { status: 200 });
+      if (result.ok) return okResponse();
       console.error(`auth-send-otp: msg91 failed (status ${result.status})`);
     }
     return errorResponse(502, 'We could not send the code. Please try again shortly.');

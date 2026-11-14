@@ -2,7 +2,7 @@
 // Secrets (function secrets, never in the repo):
 //   SEND_SMS_HOOK_SECRET   the hook's signing secret, `v1,whsec_...` as shown by Supabase
 //   OTP_THROTTLE_KEY       random string that keys the phone hash in otp_throttle
-//   WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID   WhatsApp Cloud API (owner items B1/B2)
+//   WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID          WhatsApp Cloud API (owner items B1/B2)
 //   MSG91_AUTH_KEY, MSG91_TEMPLATE_ID                 optional fallback (owner item B3)
 //   ALLOW_INTERNATIONAL_OTP=true                      optional, allows non +91 numbers
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
@@ -18,7 +18,7 @@ function required(name: string): string {
   return value;
 }
 
-const whatsappToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN');
+const whatsappToken = Deno.env.get('WHATSAPP_TOKEN');
 const whatsappPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID');
 const msg91Key = Deno.env.get('MSG91_AUTH_KEY');
 const msg91Template = Deno.env.get('MSG91_TEMPLATE_ID');

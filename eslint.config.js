@@ -29,7 +29,8 @@ module.exports = defineConfig([
     // All server access goes through packages/api (via useApi). Screens and features never touch
     // the Supabase client, so a provider switch stays a one-package change. Allowed: src/lib/**,
     // packages/api/** and the one file below.
-    files: ['apps/mobile/app/**/*.{ts,tsx}', 'apps/mobile/src/features/**/*.{ts,tsx}'],
+    files: ['apps/mobile/app/**/*.{ts,tsx}', 'apps/mobile/src/**/*.{ts,tsx}'],
+    ignores: ['apps/mobile/src/lib/**'],
     rules: {
       'no-restricted-imports': [
         'error',

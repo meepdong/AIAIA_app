@@ -326,6 +326,7 @@ enabled = false
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# Local only. Never run `supabase config push`; the hosted project uses the Send SMS hook.
 # AIAIA local dev only: a placeholder provider so Supabase turns phone login on. Real delivery
 # goes through the Send SMS hook (auth-send-otp); the test numbers above never call Twilio.
 [auth.sms.twilio]
@@ -458,3 +459,7 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+[functions.auth-send-otp]
+# GoTrue's hook call carries no JWT. The Standard Webhooks signature is the authentication.
+verify_jwt = false
