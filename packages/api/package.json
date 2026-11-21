@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@aiaia/shared": "workspace:*",
+    "@noble/curves": "1.9.7",
     "@supabase/supabase-js": "^2.119.0"
   }
 }

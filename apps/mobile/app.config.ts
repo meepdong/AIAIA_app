@@ -27,6 +27,8 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   android: {
     package: variant.androidPackage,
+    // Auto Backup would copy the check-in database (other members' data) to the staff member's Google Drive.
+    allowBackup: false,
     // Minimum set. Feature briefs add what they need (camera, notifications) next to their code.
     permissions: ['android.permission.INTERNET'],
     adaptiveIcon: {
@@ -41,9 +43,35 @@ const config: ExpoConfig = {
     bundler: 'metro',
     favicon: './assets/images/favicon.png',
   },
+  extra: {
+    // Ed25519 public key (base64url) that verifies delegate passes offline. Set by
+    // `node scripts/gen-pass-keys.mjs`; empty means scanners refuse every pass (fail closed).
+    passPublicKey: '',
+  },
   plugins: [
     'expo-router',
     'expo-secure-store',
+    'expo-sqlite',
+    // Embeds Figtree in the Android build so text is right on first paint; the JS loader in
+    // app/_layout.tsx covers web.
+    [
+      'expo-font',
+      {
+        fonts: [
+          '../../node_modules/@expo-google-fonts/figtree/400Regular/Figtree_400Regular.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/500Medium/Figtree_500Medium.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/600SemiBold/Figtree_600SemiBold.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/700Bold/Figtree_700Bold.ttf',
+        ],
+      },
+    ],
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'Allow AIAIA to use the camera to scan delegate passes at check-in.',
+        recordAudioAndroid: false,
+      },
+    ],
     [
       'expo-splash-screen',
       {

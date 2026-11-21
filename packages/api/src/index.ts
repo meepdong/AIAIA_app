@@ -1,5 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@aiaia/shared';
+import { createAdminApi } from './admin';
+import { createAuthApi } from './auth';
+import { createCheckinApi } from './checkin';
+import { createDirectoryApi } from './directory';
+import { createEventsApi } from './events';
+import { createImportApi } from './import';
+import { createProfileApi } from './profile';
+import { createSettingsApi } from './settings';
 
 /**
  * Shared touch point. All server access goes through this package.
@@ -7,13 +15,27 @@ import type { Database } from '@aiaia/shared';
  * factory, then registers it below with one additive line, e.g.
  *   auth: createAuthApi(client),
  */
+export type { Membership, MemberStatus } from './auth';
 export type Client = SupabaseClient<Database>;
 
 export function createApi(client: Client) {
   return {
     // feature registrations go here
+    admin: createAdminApi(client),
+    auth: createAuthApi(client),
+    checkin: createCheckinApi(client),
+    directory: createDirectoryApi(client),
+    events: createEventsApi(client),
+    profile: createProfileApi(client),
+    roster: createImportApi(client),
+    settings: createSettingsApi(client),
     _client: client,
   };
 }
 
 export type Api = ReturnType<typeof createApi>;
+export type { InfoRequest } from './profile';
+export * from './events';
+export * from './admin';
+export * from './import';
+export * from './checkin';

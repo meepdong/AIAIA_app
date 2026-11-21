@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import { focusRing, minHit, stateOverlay, type PressState } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -24,7 +24,9 @@ export function ListItem({
   accessibilityLabel,
   divider,
 }: ListItemProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
+  // Rows with a hairline run edge to edge, so their corners stay square; free rows round to md.
+  const radius = divider ? 0 : tokens.radius.md;
   const body = (state: PressState) => (
     <View
       style={[
@@ -35,13 +37,14 @@ export function ListItem({
           gap: tokens.spacing[3],
           paddingVertical: tokens.spacing[2],
           paddingHorizontal: tokens.spacing[4],
-          backgroundColor: state.hovered || state.pressed ? colors.surfaceAlt : 'transparent',
+          borderRadius: radius,
           borderBottomWidth: divider ? 1 : 0,
-          borderBottomColor: colors.surfaceAlt,
+          borderBottomColor: colors.divider,
         },
-        state.focused && focusRing(colors.text),
+        state.focused && focusRing(colors.focus),
       ]}
     >
+      {onPress ? stateOverlay(state, overlays, radius) : null}
       {left}
       <View style={{ flex: 1 }}>
         <Text>{title}</Text>

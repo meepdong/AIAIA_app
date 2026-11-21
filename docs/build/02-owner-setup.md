@@ -193,6 +193,7 @@ All secrets live in your vault first, then in GitHub Actions secrets/variables o
 | `VAPID_PUBLIC_KEY` (variable), `VAPID_PRIVATE_KEY` | Supabase functions / GitHub variable | B (agents generate these; you store them) |
 | `PASS_SIGNING_PRIVATE_KEY` (Ed25519) | Supabase functions; the public half goes in the app config | B (agents generate; you store) |
 | `SEND_SMS_HOOK_SECRET` | Supabase functions | B |
+| `OTP_THROTTLE_KEY` (random, 32+ bytes; agents generate, you store) | Supabase functions | B |
 | `WHATSAPP_*` | Supabase functions | B |
 | `MSG91_*` | Supabase functions | B (optional) |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Supabase functions | C |

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import { fieldFocusStyle, focusRing, minHit, type PressState } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Sheet } from './Sheet';
 import { Text } from './Text';
@@ -31,14 +31,12 @@ export function Select<T extends string = string>({
   disabled,
   accessibilityLabel,
 }: SelectProps<T>) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
   return (
     <View style={{ gap: tokens.spacing[1] }}>
-      <Text variant="label" bold>
-        {label}
-      </Text>
+      <Text variant="label">{label}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? `${label}, ${selected?.label ?? placeholder}`}
@@ -55,21 +53,22 @@ export function Select<T extends string = string>({
             borderWidth: 1,
             borderColor: error ? colors.danger : colors.border,
             borderRadius: tokens.radius.md,
-            backgroundColor: disabled ? colors.surfaceAlt : colors.surface,
+            backgroundColor: colors.surface,
+            opacity: disabled ? 0.5 : 1,
             paddingHorizontal: tokens.spacing[3],
           },
-          state.focused && focusRing(colors.text),
+          state.focused && fieldFocusStyle(colors, overlays, Boolean(error)),
         ]}
       >
         <Text tone={selected ? 'text' : 'textMuted'}>{selected?.label ?? placeholder}</Text>
         <Text tone="textMuted">{'▾'}</Text>
       </Pressable>
       {error ? (
-        <Text variant="label" tone="danger" accessibilityLiveRegion="polite">
+        <Text variant="caption" tone="danger" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : hint ? (
-        <Text variant="label" tone="textMuted">
+        <Text variant="caption" tone="textMuted">
           {hint}
         </Text>
       ) : null}
@@ -94,10 +93,13 @@ export function Select<T extends string = string>({
                   justifyContent: 'space-between',
                   paddingHorizontal: tokens.spacing[2],
                   borderRadius: tokens.radius.md,
-                  backgroundColor:
-                    state.hovered || state.pressed ? colors.surfaceAlt : 'transparent',
+                  backgroundColor: state.pressed
+                    ? overlays.pressed
+                    : state.hovered
+                      ? overlays.hover
+                      : 'transparent',
                 },
-                state.focused && focusRing(colors.text),
+                state.focused && focusRing(colors.focus),
               ]}
             >
               <Text bold={isSelected}>{option.label}</Text>

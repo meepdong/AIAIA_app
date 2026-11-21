@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Family and guardian</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.card{background:#FFFFFF;border:1px solid #EBEBEB;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:center}
+.av{width:44px;height:44px;border-radius:9999px;flex:none;display:flex;align-items:center;justify-content:center;background:#F0F0F0;font-weight:600}
+.btn2{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:10px;background:#0000000F;color:#000000;font-weight:600;font-size:16px;text-decoration:none}
+.btn2:hover{color:#000000;background:#0000001A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 12px 16px 8px">
+    <a href="Profile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #000000; margin-left: -10px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 22px; line-height: 31px; font-weight: 700">Family and guardian</h1>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 18px; font-weight: 700">Your guardian</h2>
+    <div class="card">
+      <span class="av">SC</span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 600">Susan Carter</b><span style="font-size: 14px; color: #474747">Mother · +91 90000 00031</span></span>
+      <span style="font-size: 13px; font-weight: 500; padding: 2px 10px; border-radius: 9999px; background: #BCE0BB; color: #00490B">Active</span>
+    </div>
+    <div style="padding: 12px; border-radius: 12px; background: #B9D7FF; color: #003978; font-size: 14px; line-height: 20px">Your guardian gets a WhatsApp message when you check in or out of an event: your first name, the event, the venue and the time. The link ends automatically on your 18th birthday.</div>
+    <h2 style="margin: 8px 0 0; font-size: 18px; font-weight: 700">Emergency contact</h2>
+    <div class="card">
+      <span class="av" style="background: #FFC4BE; color: #76000C"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 600">Susan Carter</b><span style="font-size: 14px; color: #474747">Same as guardian · officers only</span></span>
+      <a href="#" style="font-size: 15px">Change</a>
+    </div>
+    <h2 style="margin: 8px 0 0; font-size: 18px; font-weight: 700">Linked family members</h2>
+    <p style="margin: 0; font-size: 15px; color: #474747">Guardians with more than one child in AIAIA see each of them here.</p>
+    <a class="btn2" href="#"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Invite a family member</a>
+  </main>
+  <dc-import name="TabBar" active="profile" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

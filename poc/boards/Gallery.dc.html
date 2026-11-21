@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gallery</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.ph{aspect-ratio:1;background:#D9D9D9;border-radius:4px}
+.ph:nth-child(3n+2){background:#CFCFCF}
+.ph:nth-child(4n){background:#E3E3E3}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 12px 16px 8px">
+    <a href="More.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #000000; margin-left: -10px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 22px; line-height: 31px; font-weight: 700">Gallery</h1>
+    <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: #F0F0F0; color: #474747">Phase 2</span>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline"><b style="font-size: 18px">[Youth Leadership Camp]</b><span style="font-size: 14px; color: #474747">24 photos</span></div>
+    <div class="g"><span class="ph"></span><span class="ph"></span><span class="ph"></span><span class="ph"></span><span class="ph"></span><span class="ph"></span></div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px"><b style="font-size: 18px">[Community service drive]</b><span style="font-size: 14px; color: #474747">12 photos</span></div>
+    <div class="g"><span class="ph"></span><span class="ph"></span><span class="ph"></span></div>
+    <div style="padding: 12px; border-radius: 12px; background: #B9D7FF; color: #003978; font-size: 14px; line-height: 20px">Members only. Officers approve every photo before it appears. Faces of members under 18 are shown only with guardian consent.</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

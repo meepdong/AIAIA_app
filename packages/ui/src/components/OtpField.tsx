@@ -1,6 +1,6 @@
 import { useRef, useState, type ComponentRef } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { focusRing, noOutline } from '../internal/interactive';
+import { fieldFocusStyle, focusRing, noOutline } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -35,7 +35,7 @@ export function OtpField({
   disabled,
   autoFocus,
 }: OtpFieldProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   const [inner, setInner] = useState('');
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -50,9 +50,7 @@ export function OtpField({
 
   return (
     <View style={{ gap: tokens.spacing[1] }}>
-      <Text variant="label" bold>
-        {label}
-      </Text>
+      <Text variant="label">{label}</Text>
       <Pressable
         accessible={false}
         onPress={() => inputRef.current?.focus()}
@@ -75,11 +73,13 @@ export function OtpField({
                     minHeight: tokens.minHitArea + tokens.spacing[2],
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderWidth: active ? 2 : 1,
-                    borderColor: error ? colors.danger : active ? colors.text : colors.border,
+                    borderWidth: 1,
+                    borderColor: error ? colors.danger : colors.border,
                     borderRadius: tokens.radius.md,
                     backgroundColor: colors.surface,
+                    opacity: disabled ? 0.5 : 1,
                   },
+                  active && fieldFocusStyle(colors, overlays, Boolean(error)),
                 ]}
               >
                 <Text variant="heading">{code[i] ?? ''}</Text>
@@ -116,12 +116,12 @@ export function OtpField({
               color: 'transparent',
               ...noOutline,
             },
-            focused && focusRing(colors.text),
+            focused && focusRing(colors.focus),
           ]}
         />
       </Pressable>
       {error ? (
-        <Text variant="label" tone="danger" accessibilityLiveRegion="polite">
+        <Text variant="caption" tone="danger" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : null}

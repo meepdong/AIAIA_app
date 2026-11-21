@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { focusRing, noOutline } from '../internal/interactive';
+import { fieldFocusStyle, noOutline } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -41,7 +41,7 @@ function splitIso(value: string): { day: string; month: string; year: string } {
  * native module, and behaves the same on Android and web.
  */
 export function DateField({ label, value, onChange, hint, error, disabled }: DateFieldProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   const [parts, setParts] = useState(() => splitIso(value));
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
 
@@ -70,10 +70,11 @@ export function DateField({ label, value, onChange, hint, error, disabled }: Dat
           borderWidth: 1,
           borderColor: message ? colors.danger : colors.border,
           borderRadius: tokens.radius.md,
-          backgroundColor: disabled ? colors.surfaceAlt : colors.surface,
+          backgroundColor: colors.surface,
+          opacity: disabled ? 0.5 : 1,
           justifyContent: 'center',
         },
-        focusedKey === key && focusRing(colors.text),
+        focusedKey === key && fieldFocusStyle(colors, overlays, Boolean(message)),
       ]}
     >
       <TextInput
@@ -101,20 +102,18 @@ export function DateField({ label, value, onChange, hint, error, disabled }: Dat
 
   return (
     <View accessibilityRole="none" style={{ gap: tokens.spacing[1] }}>
-      <Text variant="label" bold>
-        {label}
-      </Text>
+      <Text variant="label">{label}</Text>
       <View style={{ flexDirection: 'row', gap: tokens.spacing[2] }}>
         {box('day', 'DD', 1)}
         {box('month', 'MM', 1)}
         {box('year', 'YYYY', 1.6)}
       </View>
       {message ? (
-        <Text variant="label" tone="danger" accessibilityLiveRegion="polite">
+        <Text variant="caption" tone="danger" accessibilityLiveRegion="polite">
           {message}
         </Text>
       ) : hint ? (
-        <Text variant="label" tone="textMuted">
+        <Text variant="caption" tone="textMuted">
           {hint}
         </Text>
       ) : null}

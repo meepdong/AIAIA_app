@@ -1,11 +1,22 @@
 import { SESSION_STATES, homeRouteFor, isSessionState, useMockedSessionState } from './session';
 
+// The session provider reaches the API layer, which would load the native storage modules.
+// session.tsx imports the offline cache; its native store is not needed for these pure functions.
+jest.mock('./large-secure-store', () => ({ LargeSecureStore: class {} }));
+
+jest.mock('@/lib/supabase', () => ({
+  getSupabase: () => {
+    throw new Error('no Supabase config in this test');
+  },
+}));
+
 describe('auth-gate stub', () => {
   it('routes each session state to its screen', () => {
     expect(homeRouteFor('signed_out')).toBe('/phone');
     expect(homeRouteFor('no_profile')).toBe('/profile-setup');
     expect(homeRouteFor('pending')).toBe('/waiting-room');
     expect(homeRouteFor('blocked')).toBe('/blocked');
+    expect(homeRouteFor('adult_consent')).toBe('/adult-consent');
     expect(homeRouteFor('active')).toBe('/home');
   });
 

@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import {
+  focusRing,
+  minHit,
+  pressScale,
+  stateOverlay,
+  type PressState,
+} from '../internal/interactive';
 import { useTheme } from '../theme';
 
 export type IconButtonProps = Omit<PressableProps, 'children' | 'style'> & {
@@ -10,8 +16,9 @@ export type IconButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   accessibilityLabel: string;
 };
 
+/** Ghost-button rules on a 44 pt target. */
 export function IconButton({ icon, disabled, accessibilityLabel, ...rest }: IconButtonProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   return (
     <Pressable
       {...rest}
@@ -24,14 +31,20 @@ export function IconButton({ icon, disabled, accessibilityLabel, ...rest }: Icon
         {
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: tokens.radius.full,
-          backgroundColor: state.hovered || state.pressed ? colors.surfaceAlt : 'transparent',
+          borderRadius: tokens.radius.md,
+          backgroundColor: 'transparent',
           opacity: disabled ? 0.5 : 1,
         },
-        state.focused && focusRing(colors.text),
+        pressScale(state.pressed && !disabled),
+        state.focused && focusRing(colors.focus),
       ]}
     >
-      {icon}
+      {(state: PressState) => (
+        <>
+          {disabled ? null : stateOverlay(state, overlays, tokens.radius.md)}
+          {icon}
+        </>
+      )}
     </Pressable>
   );
 }

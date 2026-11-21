@@ -371,6 +371,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"event_reminders_sent": {
+                  Row: {
+                    "event_id": string,"kind": string,"member_id": string,"sent_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "event_id": string,"kind": string,"member_id": string,"sent_at"?: string
+                  }
+                  Update: {
+                    "event_id"?: string,"kind"?: string,"member_id"?: string,"sent_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "event_reminders_sent_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_reminders_sent_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "member_cards"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_reminders_sent_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"event_staff": {
                   Row: {
                     "added_by": string | null,"capabilities": (string)[],"created_at": string,"event_id": string,"member_id": string
@@ -938,6 +970,31 @@ isOneToOne: false
             "add_dependent":
 { Args: { "payload": Json }; Returns: Json
                            },
+"admin_export_members":
+{ Args: { "after"?: string,"branch_id"?: string,"page_size"?: number }; Returns: {
+              "approved_at": string,"branch_code": string,"branch_name": string,"city": string,"contacts_withheld": boolean,"dob": string,"email": string,"full_name": string,"gender": string,"has_login": boolean,"is_minor": boolean,"member_id": string,"member_no": string,"phone": string,"status": string,"wing": string
+            }[]
+                           },
+"admin_list_settings":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "description": string,"editable": boolean,"is_public": boolean,"is_secret": boolean,"key": string,"updated_at": string,"value": Json
+            }[]
+                           },
+"admin_set_member_branch":
+{ Args: { "member_id": string,"to_branch_id": string }; Returns: Json
+                           },
+"admin_set_setting":
+{ Args: { "key": string,"value": Json }; Returns: Json
+                           },
+"admin_setting_is_editable":
+{ Args: { "key": string }; Returns: boolean
+                           },
+"admin_setting_is_secret":
+{ Args: { "key": string }; Returns: boolean
+                           },
+"admin_setting_value_error":
+{ Args: { "k": string,"v": Json }; Returns: string
+                           },
 "adult_handover_grace_days":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
@@ -955,6 +1012,11 @@ isOneToOne: false
                            },
 "branch_officers":
 { Args: { "branch": string }; Returns: string[]
+                           },
+"bulk_passes":
+{ Args: { "branch_id"?: string,"event_id"?: string }; Returns: {
+              "branch_name": string,"full_name": string,"member_id": string,"pass_version": number
+            }[]
                            },
 "can_manage_member":
 { Args: { "target": string }; Returns: boolean
@@ -986,9 +1048,24 @@ isOneToOne: false
 "end_role":
 { Args: { "assignment_id": string,"ends_on"?: string }; Returns: Json
                            },
+"event_attendees":
+{ Args: { "event_id": string }; Returns: {
+              "branch_name": string,"full_name": string,"member_id": string,"member_no": string,"registered_at": string,"registered_by_guardian": boolean,"status": string
+            }[]
+                           },
 "event_pack":
 { Args: { "event_id": string }; Returns: {
               "age_group": string,"branch_name": string,"full_name": string,"guardian_names": (string)[],"member_id": string,"member_no": string,"pass_version": number,"photo_path": string
+            }[]
+                           },
+"event_spots":
+{ Args: { "event_ids": (string)[] }; Returns: {
+              "event_id": string,"going": number,"waitlisted": number
+            }[]
+                           },
+"event_team":
+{ Args: { "event_id": string }; Returns: {
+              "branch_name": string,"capabilities": (string)[],"full_name": string,"member_id": string
             }[]
                            },
 "give_adult_consent":
@@ -1029,6 +1106,16 @@ isOneToOne: false
               "branch_id": string,"claim_code_expires_at": string,"dob": string,"full_name": string,"has_login": boolean,"member_id": string,"member_no": string,"relationship": string,"status": Database["public"]['Enums']["member_status"],"wing": string
             }[]
                            },
+"my_event_duties":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "capabilities": (string)[],"ends_at": string,"event_id": string,"starts_at": string,"title": string,"venue_name": string
+            }[]
+                           },
+"my_passes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "branch_name": string,"full_name": string,"is_self": boolean,"member_id": string,"pass_version": number
+            }[]
+                           },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: {
               "branch_id": string,"permission_key": string
@@ -1045,11 +1132,17 @@ isOneToOne: false
 "notify_member_or_guardians":
 { Args: { "data"?: Json,"guardian_body": string,"guardian_title": string,"kind": string,"priority": string,"self_body": string,"self_title": string,"target": string }; Returns: number
                            },
+"otp_throttle_take":
+{ Args: { "p_hash": string }; Returns: Json
+                           },
 "publish_announcement":
 { Args: { "id": string,"notify"?: boolean }; Returns: number
                            },
 "register_push_token":
 { Args: { "platform": string,"subscription"?: Json,"token": string }; Returns: string
+                           },
+"reissue_pass":
+{ Args: { "member_id": string }; Returns: number
                            },
 "reject_member":
 { Args: { "member_id": string,"reason": string }; Returns: Json
@@ -1077,6 +1170,9 @@ isOneToOne: false
               "branch_name": string,"city": string,"email": string,"full_name": string,"id": string,"occupation": string,"phone": string,"photo_path": string
             }[]
                            },
+"send_event_reminders":
+{ Args: { "reminder_kind": string }; Returns: number
+                           },
 "set_event_staff":
 { Args: { "capabilities": (string)[],"event_id": string,"member_id": string }; Returns: undefined
                            },
@@ -1100,6 +1196,9 @@ isOneToOne: false
                            },
 "verify_member_id":
 { Args: { "member_id": string,"pass_version": number }; Returns: Json
+                           },
+"wake_event_reminders":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "wake_notify_dispatch":
 { Args: Record<PropertyKey, never>; Returns: undefined

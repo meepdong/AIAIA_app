@@ -23,4 +23,34 @@ module.exports = defineConfig([
       },
     },
   },
+  {
+    // Deno Edge Functions: jsr:/npm: specifiers that Node's import resolver cannot follow.
+    // Only that one rule is off; everything else is still linted. Tested by `deno test`.
+    files: ['supabase/functions/**'],
+    rules: { 'import/no-unresolved': 'off' },
+  },
+  {
+    // All server access goes through packages/api (via useApi). Screens and features never touch
+    // the Supabase client, so a provider switch stays a one-package change. Allowed: src/lib/**,
+    // packages/api/** and the one file below.
+    files: ['apps/mobile/app/**/*.{ts,tsx}', 'apps/mobile/src/**/*.{ts,tsx}'],
+    ignores: ['apps/mobile/src/lib/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@supabase/*', '**/lib/supabase'],
+              message: 'Use useApi() from @/features/auth/useApi (packages/api) instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/mobile/src/features/auth/useApi.tsx'],
+    rules: { 'no-restricted-imports': 'off' },
+  },
 ]);

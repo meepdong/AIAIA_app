@@ -14,6 +14,8 @@ export function Text({ variant = 'body', tone = 'text', bold, style, ...rest }: 
   const { colors, tokens } = useTheme();
   const scale = tokens.fontSize[variant];
   const isHeading = variant === 'heading' || variant === 'title' || variant === 'display';
+  // Labels (field labels, button text) are medium weight; bold still asks for semibold.
+  const weight = bold || isHeading ? '600' : variant === 'label' ? '500' : '400';
   return (
     <RNText
       accessibilityRole={isHeading ? 'header' : undefined}
@@ -23,7 +25,9 @@ export function Text({ variant = 'body', tone = 'text', bold, style, ...rest }: 
           color: colors[tone],
           fontSize: scale.size,
           lineHeight: scale.lineHeight,
-          fontWeight: bold || isHeading ? '600' : '400',
+          // Figtree ships one family per weight; fontWeight stays for the system-font fallback.
+          fontFamily: tokens.fontFamily[weight],
+          fontWeight: weight,
         },
         style,
       ]}

@@ -10,8 +10,9 @@ export type CardProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function Card({ children, elevation = 'sm', style }: CardProps) {
-  const { colors, tokens } = useTheme();
+/** A 1 px divider outline and no resting shadow; pass `elevation` to raise it. */
+export function Card({ children, elevation, style }: CardProps) {
+  const { colors, scheme, tokens } = useTheme();
   return (
     <View
       style={[
@@ -19,10 +20,10 @@ export function Card({ children, elevation = 'sm', style }: CardProps) {
           backgroundColor: colors.surface,
           borderRadius: tokens.radius.lg,
           borderWidth: 1,
-          borderColor: colors.surfaceAlt,
+          borderColor: colors.divider,
           padding: tokens.spacing[4],
         },
-        elevationStyle(elevation),
+        elevation ? elevationStyle(elevation, scheme) : null,
         style,
       ]}
     >

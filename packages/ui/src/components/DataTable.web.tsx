@@ -14,7 +14,7 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import { focusRing, minHit, stateOverlay, type PressState } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Button } from './Button';
 import type { DataTableColumn, DataTableProps } from './DataTable.types';
@@ -49,7 +49,7 @@ export function DataTable<T extends object>({
   onRowPress,
   emptyMessage = 'No rows',
 }: DataTableProps<T>) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
 
   const defs = useMemo(
     () =>
@@ -107,11 +107,16 @@ export function DataTable<T extends object>({
       onPress={onToggle}
       style={(s: PressState) => [
         minHit,
-        { alignItems: 'center', justifyContent: 'center' },
-        s.focused && focusRing(colors.text),
+        { alignItems: 'center', justifyContent: 'center', borderRadius: tokens.radius.md },
+        s.focused && focusRing(colors.focus, true),
       ]}
     >
-      <Text>{checked ? '☑' : '☐'}</Text>
+      {(s: PressState) => (
+        <>
+          {stateOverlay(s, overlays, tokens.radius.md)}
+          <Text>{checked ? '☑' : '☐'}</Text>
+        </>
+      )}
     </Pressable>
   );
 
@@ -129,81 +134,112 @@ export function DataTable<T extends object>({
           style={[
             {
               minHeight: tokens.minHitArea,
+              backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.border,
               borderRadius: tokens.radius.md,
               paddingHorizontal: tokens.spacing[3],
               color: colors.text,
+              fontFamily: tokens.fontFamily['400'],
             },
-            searchFocused && focusRing(colors.text),
+            searchFocused && focusRing(colors.focus),
           ]}
         />
       ) : null}
-      <View role="row" style={{ flexDirection: 'row', backgroundColor: colors.surfaceAlt }}>
-        {selectable
-          ? checkbox(table.getIsAllPageRowsSelected(), 'Select all rows on this page', () =>
-              table.toggleAllPageRowsSelected(),
-            )
-          : null}
-        {table.getHeaderGroups()[0]?.headers.map((h) => {
-          const sorted = h.column.getIsSorted();
-          const canSort = h.column.getCanSort();
-          const title = String(h.column.columnDef.header ?? '');
-          return (
-            <Pressable
-              key={h.id}
-              role="columnheader"
-              accessibilityRole={canSort ? 'button' : undefined}
-              accessibilityLabel={
-                canSort ? `${title}, sort ${sorted === 'asc' ? 'descending' : 'ascending'}` : title
-              }
-              disabled={!canSort}
-              onPress={() => h.column.toggleSorting(sorted === 'asc')}
-              style={(s: PressState) => [cellStyle, s.focused && focusRing(colors.text)]}
-            >
-              <Text bold variant="label">
-                {title}
-                {sorted === 'asc' ? ' ↑' : sorted === 'desc' ? ' ↓' : ''}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {pageRows.length === 0 ? <EmptyState title={emptyMessage} /> : null}
-      {pageRows.map((row) => (
-        <Pressable
-          key={row.id}
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.divider,
+          borderRadius: tokens.radius.lg,
+          overflow: 'hidden',
+        }}
+      >
+        <View
           role="row"
-          disabled={!onRowPress}
-          onPress={() => onRowPress?.(row.original)}
-          style={(s: PressState) => [
-            {
-              flexDirection: 'row',
-              alignItems: 'center',
-              borderBottomWidth: 1,
-              borderBottomColor: colors.surfaceAlt,
-              backgroundColor: s.hovered ? colors.surfaceAlt : 'transparent',
-            },
-            s.focused && focusRing(colors.text),
-          ]}
+          style={{
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.divider,
+          }}
         >
           {selectable
-            ? checkbox(row.getIsSelected(), 'Select row', () => row.toggleSelected())
+            ? checkbox(table.getIsAllPageRowsSelected(), 'Select all rows on this page', () =>
+                table.toggleAllPageRowsSelected(),
+              )
             : null}
-          {defs.map((d) => {
-            const col = columnByKey.get(d.id);
+          {table.getHeaderGroups()[0]?.headers.map((h) => {
+            const sorted = h.column.getIsSorted();
+            const canSort = h.column.getCanSort();
+            const title = String(h.column.columnDef.header ?? '');
             return (
-              <View key={d.id} role="cell" style={cellStyle}>
-                {col?.render ? (
-                  col.render(row.original)
-                ) : (
-                  <Text>{String(col?.accessor(row.original) ?? '')}</Text>
-                )}
-              </View>
+              <Pressable
+                key={h.id}
+                role="columnheader"
+                accessibilityRole={canSort ? 'button' : undefined}
+                accessibilityLabel={
+                  canSort
+                    ? `${title}, sort ${sorted === 'asc' ? 'descending' : 'ascending'}`
+                    : title
+                }
+                disabled={!canSort}
+                onPress={() => h.column.toggleSorting(sorted === 'asc')}
+                style={(s: PressState) => [cellStyle, s.focused && focusRing(colors.focus, true)]}
+              >
+                <Text
+                  variant="caption"
+                  tone="textMuted"
+                  style={{ fontFamily: tokens.fontFamily['500'], fontWeight: '500' }}
+                >
+                  {title}
+                  {sorted === 'asc' ? ' ↑' : sorted === 'desc' ? ' ↓' : ''}
+                </Text>
+              </Pressable>
             );
           })}
-        </Pressable>
-      ))}
+        </View>
+        {pageRows.length === 0 ? <EmptyState title={emptyMessage} /> : null}
+        {pageRows.map((row, index) => (
+          <Pressable
+            key={row.id}
+            role="row"
+            disabled={!onRowPress}
+            onPress={() => onRowPress?.(row.original)}
+            style={(s: PressState) => [
+              {
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderBottomWidth: index === pageRows.length - 1 ? 0 : 1,
+                borderBottomColor: colors.divider,
+                backgroundColor: colors.surface,
+              },
+              s.focused && focusRing(colors.focus, true),
+            ]}
+          >
+            {(s: PressState) => (
+              <>
+                {onRowPress ? stateOverlay(s, overlays, 0) : null}
+                {selectable
+                  ? checkbox(row.getIsSelected(), 'Select row', () => row.toggleSelected())
+                  : null}
+                {defs.map((d) => {
+                  const col = columnByKey.get(d.id);
+                  return (
+                    <View key={d.id} role="cell" style={cellStyle}>
+                      {col?.render ? (
+                        col.render(row.original)
+                      ) : (
+                        <Text>{String(col?.accessor(row.original) ?? '')}</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </Pressable>
+        ))}
+      </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.spacing[2] }}>
         <Button
           title="Previous"

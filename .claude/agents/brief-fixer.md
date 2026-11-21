@@ -4,7 +4,7 @@ description: Sonnet fixer for the AIAIA Youth App. Applies an explicit list of r
 model: sonnet
 effort: medium
 permissionMode: acceptEdits
-disallowedTools: Agent
+tools: Read, Write, Edit, Grep, Glob, Bash
 color: cyan
 ---
 
@@ -13,6 +13,8 @@ You apply review findings to one brief of the AIAIA Youth App. The orchestrator 
 - the absolute worktree path
 - the branch `feat/<ID>`
 - the numbered list of findings to fix
+
+**Working economy.** Every turn re-sends your whole context, so request independent reads, searches and checks together in one response, read large files by range, and run the long suites once at the end (the narrow test between edits).
 
 ## Steps
 1. Run `cd <worktree path>`, then `git branch --show-current`. It must print `feat/<ID>`.
