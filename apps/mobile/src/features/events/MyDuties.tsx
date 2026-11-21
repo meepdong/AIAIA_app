@@ -1,5 +1,5 @@
 import { Button, Card, Header, QueryState, Screen, Text } from '@aiaia/ui';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { View } from 'react-native';
 import { CAPABILITY_LABEL, whenText } from './helpers';
 import { useMyDuties } from './hooks';
@@ -28,9 +28,15 @@ export function MyDuties() {
                     <Text variant="label" bold>
                       {d.capabilities.map((c) => CAPABILITY_LABEL[c] ?? c).join(', ')}
                     </Text>
-                    <View style={{ marginTop: 8 }}>
-                      <Button variant="secondary" title="Check-in (coming soon)" disabled />
-                    </View>
+                    {d.capabilities.includes('check_in') ? (
+                      <View style={{ marginTop: 8 }}>
+                        <Button
+                          variant="secondary"
+                          title="Open check-in"
+                          onPress={() => router.push(`/checkin/${d.event_id}` as Href)}
+                        />
+                      </View>
+                    ) : null}
                   </Card>
                 </View>
               ))}

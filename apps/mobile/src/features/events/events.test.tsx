@@ -276,6 +276,28 @@ describe('list and duties', () => {
     expect(await screen.findByText(/Check-in, Safety lead/)).toBeTruthy();
   });
 
+  it('a check-in duty links to the scanner; other duties have no check-in button', async () => {
+    mockPush.mockClear();
+    world.duties = [
+      {
+        event_id: EVENT,
+        title: 'Demo Youth Meetup',
+        venue_name: 'Placeholder Hall',
+        starts_at: '2026-12-01T04:30:00Z',
+        ends_at: '2026-12-01T08:30:00Z',
+        capabilities: ['check_in'],
+      },
+    ];
+    await render(wrap(<MyDuties />));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Open check-in' }));
+    expect(mockPush).toHaveBeenCalledWith(`/checkin/${EVENT}`);
+
+    world.duties = [{ ...world.duties[0], capabilities: ['collect_payments'] }];
+    await render(wrap(<MyDuties />));
+    expect(await screen.findByText('Collect payments')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Open check-in' })).toBeNull();
+  });
+
   it('shows duty details inline and never links to an event the caller cannot read', async () => {
     hideEvents = true;
     mockPush.mockClear();

@@ -1013,6 +1013,11 @@ isOneToOne: false
 "branch_officers":
 { Args: { "branch": string }; Returns: string[]
                            },
+"bulk_passes":
+{ Args: { "branch_id"?: string,"event_id"?: string }; Returns: {
+              "branch_name": string,"full_name": string,"member_id": string,"pass_version": number
+            }[]
+                           },
 "can_manage_member":
 { Args: { "target": string }; Returns: boolean
                            },
@@ -1106,6 +1111,11 @@ isOneToOne: false
               "capabilities": (string)[],"ends_at": string,"event_id": string,"starts_at": string,"title": string,"venue_name": string
             }[]
                            },
+"my_passes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "branch_name": string,"full_name": string,"is_self": boolean,"member_id": string,"pass_version": number
+            }[]
+                           },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: {
               "branch_id": string,"permission_key": string
@@ -1130,6 +1140,9 @@ isOneToOne: false
                            },
 "register_push_token":
 { Args: { "platform": string,"subscription"?: Json,"token": string }; Returns: string
+                           },
+"reissue_pass":
+{ Args: { "member_id": string }; Returns: number
                            },
 "reject_member":
 { Args: { "member_id": string,"reason": string }; Returns: Json

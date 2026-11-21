@@ -2,6 +2,11 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { AppProviders } from './AppProviders';
 
+// The session provider loads the offline-access cache (P1-07b), whose native store uses AsyncStorage.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 // The session provider reaches the API layer, which would load the native storage modules.
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
