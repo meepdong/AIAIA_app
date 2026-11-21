@@ -34,3 +34,27 @@ describe('AppProviders', () => {
     expect(liveRegions).toHaveLength(1);
   });
 });
+
+describe('AppProviders navigation theme', () => {
+  it('passes our dark tokens to React Navigation', async () => {
+    const { useTheme: useNavTheme } = jest.requireActual('expo-router') as {
+      useTheme: () => { dark: boolean; colors: { background: string } };
+    };
+    const { tokens } = jest.requireActual('@aiaia/ui') as typeof import('@aiaia/ui');
+    const rn = jest.requireActual('react-native') as { useColorScheme: () => string | null };
+    const spy = jest.spyOn(rn, 'useColorScheme').mockReturnValue('dark');
+    let seen: { dark: boolean; colors: { background: string } } | undefined;
+    function Probe() {
+      seen = useNavTheme();
+      return <Text>probe</Text>;
+    }
+    await render(
+      <AppProviders>
+        <Probe />
+      </AppProviders>,
+    );
+    spy.mockRestore();
+    expect(seen?.dark).toBe(true);
+    expect(seen?.colors.background).toBe(tokens.colors.dark.background);
+  });
+});

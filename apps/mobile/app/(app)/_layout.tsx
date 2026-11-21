@@ -1,3 +1,4 @@
+import { useTheme } from '@aiaia/ui';
 import { Tabs } from 'expo-router';
 import { useSessionState } from '@/lib/session';
 
@@ -12,8 +13,15 @@ export default function MemberLayout() {
   // offline_active (no signal, see src/lib/session.tsx): only the pass, the scanner and the offline
   // screen exist; every other member route is unreachable until the server confirms again.
   const online = useSessionState() !== 'offline_active';
+  const { colors } = useTheme();
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.textMuted,
+      }}
+    >
       <Tabs.Protected guard={online}>
         <Tabs.Screen name="home" options={{ title: 'Home' }} />
         <Tabs.Screen name="directory/index" options={{ title: 'Directory' }} />
