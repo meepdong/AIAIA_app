@@ -2,6 +2,8 @@
 
 One Expo (React Native) codebase that builds an Android app, a web app/PWA and the admin web console, backed by Supabase. It is open source; its users' data is private and many users are minors, so this repository holds **no member data and no secrets**.
 
+New contributors: read [`CONTRIBUTING.md`](CONTRIBUTING.md) first.
+
 Start with [`AGENTS.md`](AGENTS.md) (rules for every contributor) and [`docs/build/README.md`](docs/build/README.md) (build status and plan).
 
 ## Layout
