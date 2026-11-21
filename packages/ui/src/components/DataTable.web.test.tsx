@@ -3,6 +3,23 @@ import { StyleSheet } from 'react-native';
 import { DataTable, type DataTableColumn } from './DataTable.web';
 import { tokens } from '../tokens';
 
+// react-native's Pressable has no `focused` state (only react-native-web does). This wrapper adds it
+// while `mockForceFocus` is set, so the focus styles can be read.
+let mockForceFocus = false;
+jest.mock('react-native/Libraries/Components/Pressable/Pressable', () => {
+  const actual = jest.requireActual('react-native/Libraries/Components/Pressable/Pressable');
+  const { forwardRef, createElement } = jest.requireActual('react');
+  const Wrapped = forwardRef((props: { style?: unknown }, ref: unknown) => {
+    const inner = props.style as unknown;
+    const style =
+      typeof inner === 'function'
+        ? (state: object) => (inner as Function)({ ...state, focused: mockForceFocus })
+        : inner;
+    return createElement(actual.default, { ...props, style, ref });
+  });
+  return { __esModule: true, default: Wrapped };
+});
+
 type Row = { id: string; name: string; age: number };
 
 const rows: Row[] = [
@@ -131,5 +148,29 @@ describe('DataTable.web', () => {
     expect(style.backgroundColor).toBe(light.surface);
     expect(style.borderBottomColor).toBe(light.divider);
     expect(style.borderBottomWidth).toBe(1);
+  });
+
+  it('draws the focus ring inside the clipping frame on headers, rows and checkboxes', async () => {
+    mockForceFocus = true;
+    try {
+      await render(
+        <DataTable
+          data={rows}
+          columns={columns}
+          getRowId={(r) => r.id}
+          accessibilityLabel="People"
+          selectable
+          onRowPress={() => {}}
+        />,
+      );
+    } finally {
+      mockForceFocus = false;
+    }
+    const offsetOf = (node: { props: { style?: unknown } }) =>
+      StyleSheet.flatten(node.props.style as never)?.outlineOffset;
+    expect(offsetOf(screen.getByLabelText('Name, sort ascending'))).toBeLessThan(0);
+    expect(offsetOf(screen.getAllByLabelText('Select row')[0]!)).toBeLessThan(0);
+    const dataRow = screen.getAllByRole('row')[1]!;
+    expect(offsetOf(dataRow)).toBeLessThan(0);
   });
 });

@@ -17,9 +17,17 @@ import {
 /** react-native-web adds hovered/focused to Pressable's state; native only has pressed. */
 export type PressState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
 
-/** Visible keyboard focus ring (web; harmless on native). */
-export function focusRing(color: string): ViewStyle {
-  return { outlineWidth: 2, outlineColor: color, outlineOffset: 3, outlineStyle: 'solid' };
+/**
+ * Visible keyboard focus ring (web; harmless on native). `inset` draws it inside the element, for
+ * controls inside an `overflow: hidden` frame that would clip an outside ring.
+ */
+export function focusRing(color: string, inset = false): ViewStyle {
+  return {
+    outlineWidth: 2,
+    outlineColor: color,
+    outlineOffset: inset ? -2 : 3,
+    outlineStyle: 'solid',
+  };
 }
 
 /**

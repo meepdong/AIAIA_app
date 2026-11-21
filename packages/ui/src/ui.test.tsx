@@ -9,6 +9,8 @@ import { IconButton } from './components/IconButton';
 import { TextField } from './components/TextField';
 import { Select } from './components/Select';
 import { Tag } from './components/Tag';
+import { Badge } from './components/Badge';
+import { Avatar } from './components/Avatar';
 import { Text } from './components/Text';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Card } from './components/Card';
@@ -465,4 +467,42 @@ describe('Astryx fix round 1', () => {
       expect(secondary).toContain(tokens.overlays[scheme].pressed);
     },
   );
+});
+
+describe('Astryx fix round 2: badge, tag and avatar mapping', () => {
+  const styleOf = (node: unknown) =>
+    StyleSheet.flatten((node as { props: { style?: never } }).props.style) ?? {};
+
+  it.each([
+    ['success', 'successMuted', 'onSuccessMuted'],
+    ['danger', 'dangerMuted', 'onDangerMuted'],
+  ] as const)('paints a %s Badge with its muted pair', async (tone, fill, text) => {
+    await render(<Badge label="State" tone={tone} />);
+    const label = screen.getByText('State');
+    expect(styleOf(label).color).toBe(tokens.colors.light[text]);
+    expect(styleOf(label.parent).backgroundColor).toBe(tokens.colors.light[fill]);
+  });
+
+  it('keeps Badge and a plain Tag at 20 pt', async () => {
+    await render(
+      <>
+        <Badge label="B" />
+        <Tag label="T" />
+      </>,
+    );
+    expect(styleOf(screen.getByText('B').parent).minHeight).toBe(tokens.spacing[5]);
+    expect(styleOf(screen.getByText('T').parent).minHeight).toBe(tokens.spacing[5]);
+  });
+
+  it('sizes Avatar initials at 0.4 of the avatar size', async () => {
+    await render(<Avatar name="Asha Rao" size={60} />);
+    expect(styleOf(screen.getByText('AR')).fontSize).toBe(24);
+  });
+
+  it('gives a remove-only Tag a 44 pt wrapper', async () => {
+    await render(<Tag label="Youth" onRemove={() => {}} />);
+    const wrapper = screen.getByText('Youth').parent?.parent;
+    expect(styleOf(wrapper).minHeight).toBeGreaterThanOrEqual(tokens.minHitArea);
+    expect(styleOf(wrapper).minWidth).toBeGreaterThanOrEqual(tokens.minHitArea);
+  });
 });

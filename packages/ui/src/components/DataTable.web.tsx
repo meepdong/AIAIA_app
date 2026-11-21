@@ -108,7 +108,7 @@ export function DataTable<T extends object>({
       style={(s: PressState) => [
         minHit,
         { alignItems: 'center', justifyContent: 'center', borderRadius: tokens.radius.md },
-        s.focused && focusRing(colors.focus),
+        s.focused && focusRing(colors.focus, true),
       ]}
     >
       {(s: PressState) => (
@@ -185,7 +185,7 @@ export function DataTable<T extends object>({
                 }
                 disabled={!canSort}
                 onPress={() => h.column.toggleSorting(sorted === 'asc')}
-                style={(s: PressState) => [cellStyle, s.focused && focusRing(colors.focus)]}
+                style={(s: PressState) => [cellStyle, s.focused && focusRing(colors.focus, true)]}
               >
                 <Text
                   variant="caption"
@@ -214,7 +214,7 @@ export function DataTable<T extends object>({
                 borderBottomColor: colors.divider,
                 backgroundColor: colors.surface,
               },
-              s.focused && focusRing(colors.focus),
+              s.focused && focusRing(colors.focus, true),
             ]}
           >
             {(s: PressState) => (
