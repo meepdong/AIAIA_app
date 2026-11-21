@@ -37,7 +37,7 @@ export type ColorPalette = Record<ColorRole, string>;
  * and neutral badge, `hover` and `pressed` for interaction states. Outside COLOR_ROLES on purpose:
  * the colour roles are opaque six-digit hex.
  */
-export type OverlayRole = 'fill' | 'hover' | 'pressed';
+export type OverlayRole = 'fill' | 'hover' | 'pressed' | 'scrim';
 export type OverlayPalette = Record<OverlayRole, string>;
 
 export type TextVariant = keyof typeof raw.fontSize;

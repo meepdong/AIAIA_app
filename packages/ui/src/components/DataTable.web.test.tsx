@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { DataTable, type DataTableColumn } from './DataTable.web';
+import { tokens } from '../tokens';
 
 type Row = { id: string; name: string; age: number };
 
@@ -108,5 +109,27 @@ describe('DataTable.web', () => {
     expect(
       StyleSheet.flatten(screen.getByLabelText('Search table').props.style).outlineWidth,
     ).toBeUndefined();
+  });
+
+  it('draws the header on the surface with a divider underneath and muted medium text', async () => {
+    await render(
+      <DataTable
+        data={rows}
+        columns={columns}
+        getRowId={(r) => r.id}
+        accessibilityLabel="People"
+      />,
+    );
+    const light = tokens.colors.light;
+    const text = StyleSheet.flatten(screen.getByText('Age').props.style);
+    expect(text.color).toBe(light.textMuted);
+    expect(text.fontFamily).toBe('Figtree_500Medium');
+    const header = screen.getByRole('columnheader', { name: 'Age' }).parent as unknown as {
+      props: { style: Parameters<typeof StyleSheet.flatten>[0] };
+    };
+    const style = StyleSheet.flatten(header.props.style) ?? {};
+    expect(style.backgroundColor).toBe(light.surface);
+    expect(style.borderBottomColor).toBe(light.divider);
+    expect(style.borderBottomWidth).toBe(1);
   });
 });

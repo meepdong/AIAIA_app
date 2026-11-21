@@ -11,6 +11,11 @@ import { Select } from './components/Select';
 import { Tag } from './components/Tag';
 import { Text } from './components/Text';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { Card } from './components/Card';
+import { Screen } from './components/Screen';
+import { ListItem } from './components/ListItem';
+import { ToastHost, toast } from './components/Toast';
+import { ThemeProvider } from './theme';
 import { QueryState, type QueryLike } from './components/QueryState';
 import { toIsoDate } from './components/DateField';
 import { toNationalNumber } from './components/PhoneField';
@@ -326,5 +331,95 @@ describe('Astryx controls', () => {
       fontFamily: 'Figtree_500Medium',
       fontWeight: '500',
     });
+  });
+});
+
+describe('Astryx layout and feedback', () => {
+  const flat = (node: { props: { style?: unknown } }) =>
+    (StyleSheet.flatten(node.props.style as never) as Record<string, unknown>) ?? {};
+  type Node = { props: { style?: unknown; [k: string]: unknown }; parent: Node | null };
+  /** The nearest ancestor (or the node itself) whose flattened style has `key`. */
+  const up = (node: Node, key: string) => {
+    let cur: Node | null = node;
+    while (cur && flat(cur)[key] === undefined) cur = cur.parent;
+    return flat(cur as never);
+  };
+  const metrics = {
+    frame: { x: 0, y: 0, width: 360, height: 640 },
+    insets: { top: 0, left: 0, right: 0, bottom: 0 },
+  };
+  const light = tokens.colors.light;
+
+  it('outlines a Card with a 1 px divider and no resting shadow', async () => {
+    await render(
+      <Card>
+        <RNText>card body</RNText>
+      </Card>,
+    );
+    const style = flat(screen.getByText('card body').parent as never);
+    expect(style.borderColor).toBe(light.divider);
+    expect(style.borderWidth).toBe(1);
+    expect(style.boxShadow).toBeUndefined();
+    expect(style.elevation).toBeUndefined();
+  });
+
+  it('paints a Screen on the page background', async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <Screen>
+          <RNText>page body</RNText>
+        </Screen>
+      </SafeAreaProvider>,
+    );
+    expect(up(screen.getByText('page body') as never, 'backgroundColor').backgroundColor).toBe(
+      light.background,
+    );
+  });
+
+  it('uses the dark shadow token for a Sheet in the dark scheme', async () => {
+    await render(
+      <ThemeProvider scheme="dark">
+        <SafeAreaProvider initialMetrics={metrics}>
+          <Sheet visible onClose={() => {}} title="Pick one">
+            <RNText>body</RNText>
+          </Sheet>
+        </SafeAreaProvider>
+      </ThemeProvider>,
+    );
+    const panel = up(screen.getByText('Pick one') as never, 'boxShadow');
+    expect(panel.boxShadow).toBe(tokens.elevation.lg.boxShadowDark);
+    expect(panel.borderTopLeftRadius).toBe(tokens.radius.xl);
+  });
+
+  it('uses the dark shadow token for a ConfirmDialog in the dark scheme', async () => {
+    await render(
+      <ThemeProvider scheme="dark">
+        <ConfirmDialog visible title="Delete?" onConfirm={jest.fn()} onCancel={jest.fn()} />
+      </ThemeProvider>,
+    );
+    expect(up(screen.getByText('Delete?') as never, 'boxShadow').boxShadow).toBe(
+      tokens.elevation.lg.boxShadowDark,
+    );
+    expect(
+      flat(screen.getByTestId('confirm-backdrop', { includeHiddenElements: true })).backgroundColor,
+    ).toBe(tokens.overlays.dark.scrim);
+  });
+
+  it('fills a toast with the muted pair for its tone', async () => {
+    toast.clear();
+    await render(<ToastHost />);
+    await act(async () => {
+      toast.success('Saved');
+    });
+    const pill = screen.getByRole('alert');
+    expect(flat(pill).backgroundColor).toBe(light.successMuted);
+    expect(flat(screen.getByText('Saved')).color).toBe(light.onSuccessMuted);
+    expect(flat(pill).borderRadius).toBe(tokens.radius.lg);
+    await act(async () => toast.clear());
+  });
+
+  it('keeps pressable list rows at 44 pt', async () => {
+    await render(<ListItem title="Row" onPress={() => {}} />);
+    expect(up(screen.getByText('Row') as never, 'minHeight').minHeight).toBeGreaterThanOrEqual(44);
   });
 });

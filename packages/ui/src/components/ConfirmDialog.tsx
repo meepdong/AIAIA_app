@@ -28,7 +28,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, scheme, tokens } = useTheme();
   return (
     <Modal
       visible={visible}
@@ -56,7 +56,7 @@ export function ConfirmDialog({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            backgroundColor: overlays.scrim,
           }}
         />
         <View
@@ -71,7 +71,7 @@ export function ConfirmDialog({
               padding: tokens.spacing[5],
               gap: tokens.spacing[3],
             },
-            elevationStyle('lg'),
+            elevationStyle('lg', scheme),
           ]}
         >
           <Text variant="heading">{title}</Text>

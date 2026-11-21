@@ -24,7 +24,7 @@ export function Screen({
   const { colors, tokens } = useTheme();
   const padding: ViewStyle = padded ? { padding: tokens.spacing[4], gap: tokens.spacing[4] } : {};
   return (
-    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.surface }}>
+    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -51,3 +51,18 @@ The other tokens: `spacing`, `radius` (`none 0`, `sm 6`, `md 10`, `lg 12`, `xl 2
 
 `apps/mobile/app/_layout.tsx` loads the Figtree faces and falls back to the system font if loading
 fails or takes longer than four seconds.
+
+## Layout and feedback decisions
+
+- **Page vs surface.** `Screen` and the `AdminLayout` content area are `background`; cards, sheets, dialogs, headers, toasts, the sidebar and the table body are `surface`.
+- **Hairlines.** Header bottom, list dividers, table rows, the sidebar edge and the `Card` border are 1 px `divider`.
+- **Card** has no resting shadow. `elevation` is now opt-in (it used to default to `sm`).
+- **Radii.** `Card`, `Toast`, `ConfirmDialog` and the table frame use `lg`; `Sheet` top corners use `xl`; list rows and nav items use `md`. Rows with a `divider` stay square so the hairline runs edge to edge.
+- **Scrim.** `overlays.scrim` (`#00000080` light, `#000000CC` dark) dims behind `Sheet`, `ConfirmDialog` and the admin drawer.
+- **Shadows.** Every `elevationStyle` call passes the scheme: `Sheet` and `ConfirmDialog` use `lg`, `Toast` uses `md`.
+- **Toast** uses the muted pair for its tone like an Astryx Banner; a neutral toast is `primary` on `onPrimary`. The message is one `label` line. No enter or exit animation, because none existed.
+- **State paint.** `ListItem` (pressable), nav items, `Toast`, table rows and table checkboxes use `stateOverlay` for hover and pressed, and `focusRing(colors.focus)` for focus.
+- **Admin nav.** Selected is an `overlays.fill` background with semibold `text`; unselected is `textMuted` at weight 400.
+- **Table header** is `surface` with a `divider` underline and `caption` 500 `textMuted` text in sentence case. Sort direction is still shown as an arrow after the header text, because it is state, not a label.
+- **Table search** keeps the outline focus ring (an existing test pins it) but in the `focus` colour.
+- **Fonts on Android.** `apps/mobile/app.config.ts` embeds the four Figtree faces through the `expo-font` config plugin.
