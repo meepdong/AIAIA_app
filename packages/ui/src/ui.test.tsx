@@ -5,6 +5,7 @@ import { Dimensions, StyleSheet, Text as RNText } from 'react-native';
 import { Header } from './components/Header';
 import { Sheet } from './components/Sheet';
 import { Button } from './components/Button';
+import { Text } from './components/Text';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { QueryState, type QueryLike } from './components/QueryState';
 import { toIsoDate } from './components/DateField';
@@ -159,6 +160,60 @@ describe('tokens', () => {
       expect(contrast(tone, c.surface)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(c.onPrimary, tone)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it.each(['light', 'dark'] as const)('%s theme muted pairs and info meet AA', (scheme) => {
+    const c = tokens.colors[scheme];
+    const pairs = [
+      ['onInfoMuted', c.onInfoMuted, c.infoMuted],
+      ['onSuccessMuted', c.onSuccessMuted, c.successMuted],
+      ['onWarningMuted', c.onWarningMuted, c.warningMuted],
+      ['onDangerMuted', c.onDangerMuted, c.dangerMuted],
+    ] as const;
+    for (const [name, fg, bg] of pairs) {
+      expect([name, contrast(fg, bg) >= 4.5]).toEqual([name, true]);
+    }
+    expect(contrast(c.info, c.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c.onPrimary, c.info)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c.border, c.background)).toBeGreaterThanOrEqual(3);
+    expect(contrast(c.focus, c.surface)).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(['light', 'dark'] as const)('%s theme layers are distinct', (scheme) => {
+    const c = tokens.colors[scheme];
+    expect(c.divider.toLowerCase()).not.toBe(c.surface.toLowerCase());
+    expect(c.background.toLowerCase()).not.toBe(c.surface.toLowerCase());
+    expect(c.neutral.toLowerCase()).not.toBe(c.surface.toLowerCase());
+  });
+
+  it('carries the Astryx radius, motion and per-scheme shadow tokens', () => {
+    expect(tokens.radius).toMatchObject({ sm: 6, md: 10, lg: 12, xl: 28, full: 9999 });
+    expect(tokens.motion).toMatchObject({ fast: 125, medium: 300, slow: 700 });
+    expect(tokens.motion.easeStandard).toEqual([0.24, 1, 0.4, 1]);
+    for (const key of ['sm', 'md', 'lg'] as const) {
+      expect(tokens.elevation[key].boxShadowDark).toContain('inset');
+      expect(tokens.elevation[key].boxShadow).not.toContain('inset');
+    }
+  });
+
+  it('Text uses the Figtree face for its weight', async () => {
+    await render(
+      <>
+        <Text>plain body</Text>
+        <Text variant="heading">a heading</Text>
+        <Text bold>bold body</Text>
+      </>,
+    );
+    const family = (label: string) => StyleSheet.flatten(screen.getByText(label).props.style);
+    expect(family('plain body')).toMatchObject({
+      fontFamily: 'Figtree_400Regular',
+      fontWeight: '400',
+    });
+    expect(family('a heading')).toMatchObject({
+      fontFamily: 'Figtree_600SemiBold',
+      fontWeight: '600',
+    });
+    expect(family('bold body')).toMatchObject({ fontFamily: 'Figtree_600SemiBold' });
   });
 });
 
