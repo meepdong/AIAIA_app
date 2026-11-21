@@ -32,6 +32,7 @@ export const adminNav: AdminNavEntry[] = [
     href: '/events/manage',
     anyOf: ['events.national', 'events.branch'],
   },
+  { key: 'import', label: 'Import', href: '/import', anyOf: ['roster.import'] },
   // Other briefs: add one entry each above this line.
 ];
 

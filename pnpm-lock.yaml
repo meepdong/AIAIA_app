@@ -256,6 +256,9 @@ importers:
       nativewind:
         specifier: 4.2.7
         version: 4.2.7(0d95422c9db11a47f6e60019cb417366)
+      papaparse:
+        specifier: ^5.7.1
+        version: 5.7.1
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -280,10 +283,16 @@ importers:
       react-native-worklets:
         specifier: 0.13.0
         version: 0.13.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/aes-js':
         specifier: ^3.1.4
         version: 3.1.4
+      '@types/papaparse':
+        specifier: ^5.5.2
+        version: 5.5.2
       '@types/react':
         specifier: ~19.3.0
         version: 19.3.0
@@ -1799,6 +1808,9 @@ packages:
 
   '@types/node@26.6.6':
     resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
+
+  '@types/papaparse@5.5.2':
+    resolution: {integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==}
 
   '@types/react-reconciler@0.33.1':
     resolution: {integrity: sha512-0kF59ji2mKuHUd5wytHSpmORybMYVerJvq0K10pz9ZFoOlJ3e+w1LBjLshWpCrokeyQOioRodNbO4PH4ddvRfg==}
@@ -4357,6 +4369,9 @@ packages:
 
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
+
+  papaparse@5.7.1:
+    resolution: {integrity: sha512-qOR+UDWv6D3hMxnWWOk0ZpBdCkd+kw5Yh7aXOaNSQU8A+73EA2bhW7EiUix/hY0yulUi5FRvt7PpYSI2VDvY0g==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -7276,6 +7291,10 @@ snapshots:
   '@types/node@26.6.6':
     dependencies:
       undici-types: 8.9.0
+
+  '@types/papaparse@5.5.2':
+    dependencies:
+      '@types/node': 26.6.6
 
   '@types/react-reconciler@0.33.1(@types/react@19.3.0)':
     dependencies:
@@ -10500,6 +10519,8 @@ snapshots:
   p-try@2.2.0: {}
 
   package-json-from-dist@1.0.1: {}
+
+  papaparse@5.7.1: {}
 
   parent-module@1.0.1:
     dependencies:
