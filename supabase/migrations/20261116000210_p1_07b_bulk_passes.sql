@@ -52,6 +52,7 @@ begin
       raise exception 'not allowed to print passes for this event' using errcode = '42501';
     end if;
 
+    -- Deliberate: every going registrant, other branches' included (owner decision 2026-11-21).
     return query
       select m.id, m.full_name, b.name, m.pass_version
       from public.rsvps r

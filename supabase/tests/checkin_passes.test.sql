@@ -56,6 +56,10 @@ select ok(exists (select 1 from public.my_passes() where member_id = tests.membe
 select tests.clear_auth();
 update public.member_guardians set ended_at = null, ended_reason = null
 where member_id = tests.member_id('dependent_9') and guardian_member_id = tests.member_id('guardian');
+-- The removal above reissued dependent_9's pass (migration ...000220, pinned in
+-- checkin_guardian_pass_reissue.test.sql); the refusal checks below compare against the new version.
+update t_pv set pass_version = (select m.pass_version from public.members m where m.id = t_pv.id)
+where id = tests.member_id('dependent_9');
 update public.members set status = 'suspended' where id = tests.member_id('guardian');
 select tests.authenticate_as('guardian');
 select is((select count(*) from public.my_passes()), 0::bigint, 'a suspended guardian gets no passes, not even for wards');

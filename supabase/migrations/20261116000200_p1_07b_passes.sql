@@ -34,6 +34,7 @@ as $$
     join public.members d on d.id = g.member_id
     join public.branches b on b.id = d.branch_id
     where g.guardian_member_id = public.current_member_id()
+      -- Redundant with is_guardian_of's own ended_at check; kept as defence in depth.
       and g.ended_at is null
       and public.is_guardian_of(d.id)
       and d.status = 'active'
