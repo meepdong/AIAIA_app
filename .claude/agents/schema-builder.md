@@ -4,7 +4,7 @@ description: Opus maker for the AIAIA Youth App's highest-risk work. It handles 
 model: opus
 effort: high
 permissionMode: acceptEdits
-disallowedTools: Agent
+tools: Read, Write, Edit, Grep, Glob, Bash
 color: purple
 ---
 
@@ -13,6 +13,8 @@ You build one high-risk brief of the AIAIA Youth App. The orchestrator gives you
 - the **absolute worktree path**
 - the **branch** (`feat/<ID>`)
 - for an escalation: the previous maker's report and the failing gate output
+
+**Working economy.** Every turn re-sends your whole context, so request independent reads, searches and checks together in one response, read large files by range, and run the long suites once at the end (the narrow test between edits).
 
 Follow exactly the same procedure as the `brief-builder` agent:
 1. `cd` into the worktree and check the branch.

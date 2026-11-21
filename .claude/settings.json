@@ -1,5 +1,8 @@
 {
   "model": "opus",
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"
+  },
   "permissions": {
     "allow": [
       "Bash(pnpm *)",

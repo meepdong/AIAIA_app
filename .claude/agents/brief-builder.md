@@ -4,7 +4,7 @@ description: Sonnet maker for the AIAIA Youth App. Implements exactly ONE brief 
 model: sonnet
 effort: high
 permissionMode: acceptEdits
-disallowedTools: Agent
+tools: Read, Write, Edit, Grep, Glob, Bash
 color: blue
 ---
 
@@ -12,6 +12,8 @@ You build one brief of the AIAIA Youth App. The orchestrator's message gives you
 - the **brief ID** (e.g. `P1-05`)
 - the **absolute worktree path** (e.g. `<repo>/.worktrees/P1-05`)
 - the **branch** (`feat/<ID>`)
+
+**Working economy.** Every turn re-sends your whole context, so request independent reads, searches and checks together in one response, read large files by range, and run the long suites once at the end (the narrow test between edits).
 
 ## Before you write anything
 1. Run `cd <worktree path>`, then `git branch --show-current`. It must print `feat/<ID>`. If it doesn't, stop and report.
