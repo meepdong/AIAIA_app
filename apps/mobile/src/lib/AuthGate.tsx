@@ -22,13 +22,18 @@ export function AuthGate() {
     );
   }
   const isMember = state === 'active';
+  // No signal, confirmed active within 7 days: the member group mounts, but its layout
+  // (app/(app)/_layout.tsx) then offers only the pass, the scanner and the offline screen.
+  const isOffline = state === 'offline_active';
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!isMember}>
+      <Stack.Protected guard={!isMember && !isOffline}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
-      <Stack.Protected guard={isMember}>
+      <Stack.Protected guard={isMember || isOffline}>
         <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={isMember}>
         <Stack.Screen name="(admin)" />
       </Stack.Protected>
     </Stack>

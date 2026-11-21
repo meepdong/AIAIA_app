@@ -174,6 +174,7 @@ describe('createAuthApi', () => {
       'signOut',
       'startAutoRefresh',
       'stopAutoRefresh',
+      'storedUserId',
       'verifyCode',
     ]);
   });

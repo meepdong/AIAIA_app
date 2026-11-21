@@ -1,6 +1,9 @@
 import { SESSION_STATES, homeRouteFor, isSessionState, useMockedSessionState } from './session';
 
 // The session provider reaches the API layer, which would load the native storage modules.
+// session.tsx imports the offline cache; its native store is not needed for these pure functions.
+jest.mock('./large-secure-store', () => ({ LargeSecureStore: class {} }));
+
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
     throw new Error('no Supabase config in this test');

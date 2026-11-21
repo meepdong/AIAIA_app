@@ -17,6 +17,30 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+const mockClearAll = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/checkin/scan-store', () => ({
+  clearAllScanData: () => mockClearAll(),
+  purgeExpiredScanData: jest.fn().mockResolvedValue(undefined),
+}));
+
+// The cache's native store, in memory.
+const mockStore = new Map<string, string>();
+let mockRemoveFails = false; // a store whose delete throws
+let mockSetGate: Promise<void> | null = null; // holds a write until released
+jest.mock('./large-secure-store', () => ({
+  LargeSecureStore: class {
+    getItem = async (k: string) => mockStore.get(k) ?? null;
+    setItem = async (k: string, v: string) => {
+      if (mockSetGate) await mockSetGate;
+      mockStore.set(k, v);
+    };
+    removeItem = async (k: string) => {
+      if (mockRemoveFails) throw new Error('remove failed');
+      mockStore.delete(k);
+    };
+  },
+}));
+
 type Listener = (session: unknown, event: string) => void;
 
 let emit: Listener;
@@ -27,6 +51,7 @@ const mockAuth = {
     return mockOff;
   }),
   loadMembership: jest.fn(),
+  storedUserId: jest.fn().mockResolvedValue(null),
   startAutoRefresh: jest.fn().mockResolvedValue(undefined),
   stopAutoRefresh: jest.fn().mockResolvedValue(undefined),
 };
@@ -225,6 +250,146 @@ describe('auth gate: configuration and dev override', () => {
     await renderGate();
     expect(state()).toBe('loading');
     expect(mockAuth.onSession).toHaveBeenCalled();
+  });
+});
+
+describe('session ending without a sign-out press', () => {
+  it('clears the saved event packs on this device; a live session does not', async () => {
+    mockClearAll.mockClear();
+    await renderGate();
+    await signIn(member('active'));
+    expect(mockClearAll).not.toHaveBeenCalled();
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    expect(state()).toBe('signed_out');
+    expect(mockClearAll).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('offline cold start (owner decision M3)', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const OFFLINE = { ok: false, kind: 'offline', message: 'x' };
+  const cache = (userId: string, ageMs: number) =>
+    mockStore.set(
+      'aiaia.offline_active.v1',
+      JSON.stringify({ userId, confirmedAt: Date.now() - ageMs }),
+    );
+  const cached = () => mockStore.get('aiaia.offline_active.v1') ?? null;
+  beforeEach(() => {
+    mockStore.clear();
+    mockRemoveFails = false;
+    mockSetGate = null;
+    mockClearAll.mockClear();
+    mockAuth.storedUserId.mockReset().mockResolvedValue(null);
+  });
+
+  it('a server-confirmed active result is cached for this user; nothing else is', async () => {
+    await renderGate();
+    await signIn(member('pending'));
+    expect(cached()).toBeNull();
+    await signIn(member('active'));
+    expect(JSON.parse(cached()!).userId).toBe('user-1');
+  });
+
+  it('a fresh cache and a failed (offline) my_profile() give offline_active', async () => {
+    cache('user-1', 6 * DAY);
+    await renderGate();
+    await signIn(OFFLINE);
+    expect(state()).toBe('offline_active');
+    expect(route()).toBe('/offline');
+  });
+
+  it('an expired access token offline (null start-up session, saved session kept) also works, and keeps the packs', async () => {
+    cache('user-1', DAY);
+    mockAuth.storedUserId.mockResolvedValue('user-1');
+    await renderGate();
+    await act(async () => emit(null, 'INITIAL_SESSION'));
+    expect(state()).toBe('offline_active');
+    expect(mockClearAll).not.toHaveBeenCalled();
+  });
+
+  it('an offline token-refresh failure never wipes the packs, even without a cache', async () => {
+    mockAuth.storedUserId.mockResolvedValue('user-1');
+    await renderGate();
+    await act(async () => emit(null, 'INITIAL_SESSION'));
+    expect(state()).toBe('loading');
+    expect(mockClearAll).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an 8-day-old cache', 'user-1', 8 * DAY],
+    ["another user's cache", 'user-2', DAY],
+    ['a cache from the future (clock moved back)', 'user-1', -DAY],
+  ])('%s gives no access: the spinner stays', async (_label, userId, age) => {
+    cache(userId, age);
+    await renderGate();
+    await signIn(OFFLINE);
+    expect(state()).toBe('loading');
+  });
+
+  it('a non-network failure never uses the cache', async () => {
+    cache('user-1', DAY);
+    await renderGate();
+    await signIn({ ok: false, kind: 'unknown', message: 'x' });
+    expect(state()).toBe('loading');
+  });
+
+  it('back online, a non-active answer replaces offline_active and deletes the cache', async () => {
+    jest.useFakeTimers();
+    cache('user-1', DAY);
+    await renderGate();
+    await signIn(OFFLINE);
+    expect(state()).toBe('offline_active');
+    mockAuth.loadMembership.mockResolvedValue(member('suspended'));
+    await act(async () => {
+      jest.advanceTimersByTime(PROFILE_RETRY_MS);
+    });
+    expect(state()).toBe('blocked');
+    expect(cached()).toBeNull();
+  });
+
+  it('a real sign-out (SIGNED_OUT) deletes the cache and the packs, on its own (a saved session id exists)', async () => {
+    mockAuth.storedUserId.mockResolvedValue('user-1');
+    await renderGate();
+    await signIn(member('active'));
+    expect(cached()).not.toBeNull();
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    expect(cached()).toBeNull();
+    expect(mockClearAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed delete still leaves no offline access (the revoke overwrites first)', async () => {
+    cache('user-1', DAY);
+    mockRemoveFails = true;
+    await renderGate();
+    await signIn(member('suspended'));
+    expect(state()).toBe('blocked');
+    await screen.unmount();
+    await renderGate();
+    await signIn(OFFLINE);
+    expect(state()).toBe('loading');
+  });
+
+  it('an active answer that lands after SIGNED_OUT leaves no cache', async () => {
+    let release!: () => void;
+    mockSetGate = new Promise<void>((r) => (release = r));
+    await renderGate();
+    mockAuth.loadMembership.mockResolvedValue(member('active'));
+    await act(async () => emit(SESSION, 'INITIAL_SESSION'));
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    await act(async () => {
+      release();
+    });
+    expect(cached()).toBeNull();
+    expect(state()).toBe('signed_out');
+  });
+
+  it('no saved session at all is signed_out and clears the packs', async () => {
+    cache('user-1', DAY);
+    await renderGate();
+    await act(async () => emit(null, 'INITIAL_SESSION'));
+    expect(state()).toBe('signed_out');
+    expect(cached()).toBeNull();
+    expect(mockClearAll).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -12,6 +12,11 @@ import { draftFromProfile, toPayload, validateStep } from './form';
 import { mailtoFor, parseGrievance, telFor } from './BlockedScreen';
 import { WAITING_POLL_MS } from './WaitingRoomScreen';
 
+// The session provider loads the offline-access cache (P1-07b), whose native store uses AsyncStorage.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
     throw new Error('screens must go through useApi, not the Supabase client');

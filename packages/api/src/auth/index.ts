@@ -35,6 +35,30 @@ export function parseMembership(profile: unknown): Membership | null {
   return { status: known, adultConsentRequired: consent === true };
 }
 
+/**
+ * The user id of the session saved on this device, read without the network. supabase-js keeps a
+ * session it could not refresh for a network reason, but reports it as `null` (INITIAL_SESSION);
+ * a rejected refresh token or a sign-out removes it (and emits SIGNED_OUT). So a non-null answer
+ * here with a null session means "offline", not "signed out". Any surprise reads as no session.
+ */
+export async function storedSessionUserId(client: Client): Promise<string | null> {
+  try {
+    const internal = client.auth as unknown as {
+      storage?: { getItem(key: string): string | null | Promise<string | null> };
+      storageKey?: string;
+    };
+    if (!internal.storage || !internal.storageKey) return null;
+    const raw = await internal.storage.getItem(internal.storageKey);
+    const saved: unknown = raw ? JSON.parse(raw) : null;
+    const s = saved as { refresh_token?: unknown; user?: { id?: unknown } } | null;
+    return s && typeof s.refresh_token === 'string' && typeof s.user?.id === 'string'
+      ? s.user.id
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export type SignOutOptions = {
   /** This device's push token. Its `push_tokens` row is removed so the next user gets no alerts. */
   pushToken?: string | null;
@@ -95,6 +119,11 @@ export function createAuthApi(client: Client) {
       } catch (error) {
         return mapAuthError(error);
       }
+    },
+
+    /** The saved session's user id without the network (see storedSessionUserId). */
+    storedUserId(): Promise<string | null> {
+      return storedSessionUserId(client);
     },
 
     /** Native only: keep the token fresh while the app is in the foreground. */
