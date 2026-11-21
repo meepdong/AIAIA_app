@@ -45,6 +45,19 @@ export async function clearOfflineActive(): Promise<void> {
   }
 }
 
+/**
+ * Fail-closed revoke for a non-active server answer: overwrite the entry with one that grants nothing
+ * (confirmedAt 0 is far older than the max age), then remove it. A failed remove cannot leave access open.
+ */
+export async function revokeOfflineActive(userId: string): Promise<void> {
+  try {
+    await store().set(OFFLINE_ACTIVE_KEY, JSON.stringify({ userId, confirmedAt: 0 }));
+  } catch {
+    // Fall through to the remove.
+  }
+  await clearOfflineActive();
+}
+
 /** Whether `userId` was confirmed active on this device within the last 7 days. */
 export function isFreshFor(cache: unknown, userId: string, now: number): boolean {
   const c = cache as Cache | null;

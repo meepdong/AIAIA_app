@@ -3,7 +3,12 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useApiGetter } from '@/features/auth/useApi';
 import { useAutoRefreshOnForeground } from '@/features/auth/useAutoRefresh';
 import { clearAllScanData, purgeExpiredScanData } from '@/features/checkin/scan-store';
-import { clearOfflineActive, hasOfflineActive, saveOfflineActive } from './offline-access';
+import {
+  clearOfflineActive,
+  hasOfflineActive,
+  revokeOfflineActive,
+  saveOfflineActive,
+} from './offline-access';
 
 /**
  * The auth-gate states, mirroring docs/build/01-architecture.md §7. `SessionProvider` derives the
@@ -119,8 +124,12 @@ function useRealSessionState(): SessionState {
       if (result.ok) {
         const next = stateForMembership(result.member);
         if (next === 'active') await saveOfflineActive(userId);
-        else await clearOfflineActive();
-        if (disposed || attempt !== run) return;
+        else await revokeOfflineActive(userId);
+        if (disposed || attempt !== run) {
+          // A sign-out may have cleared while the save was in flight: nothing may stay.
+          if (next === 'active') await clearOfflineActive();
+          return;
+        }
         setState(next);
       } else {
         if (result.kind === 'offline') await tryOffline(attempt, userId);

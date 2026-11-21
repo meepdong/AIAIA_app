@@ -114,8 +114,15 @@ describe('AuthGate', () => {
       await renderRouter(MEMBER_ROUTES, { initialUrl: '/home' });
       await act(async () => mockSetState('active'));
       expect(await screen.findByText('Home page')).toBeTruthy();
-      await act(async () => mockSetState('active'));
+      await act(async () => router.push('/offline' as never));
       expect(screen.queryByText('Offline page')).toBeNull();
+    });
+
+    it('a PWA reload on /directory while offline_active shows the offline screen, not the directory', async () => {
+      await renderRouter(MEMBER_ROUTES, { initialUrl: '/directory' });
+      await act(async () => mockSetState('offline_active'));
+      expect(screen.queryByText('Directory page')).toBeNull();
+      expect(await screen.findByText('Offline page')).toBeTruthy();
     });
   });
 

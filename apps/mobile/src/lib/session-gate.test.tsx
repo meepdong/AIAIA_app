@@ -24,11 +24,19 @@ jest.mock('@/features/checkin/scan-store', () => ({
 
 // The cache's native store, in memory.
 const mockStore = new Map<string, string>();
+let mockRemoveFails = false; // a store whose delete throws
+let mockSetGate: Promise<void> | null = null; // holds a write until released
 jest.mock('./large-secure-store', () => ({
   LargeSecureStore: class {
     getItem = async (k: string) => mockStore.get(k) ?? null;
-    setItem = async (k: string, v: string) => void mockStore.set(k, v);
-    removeItem = async (k: string) => void mockStore.delete(k);
+    setItem = async (k: string, v: string) => {
+      if (mockSetGate) await mockSetGate;
+      mockStore.set(k, v);
+    };
+    removeItem = async (k: string) => {
+      if (mockRemoveFails) throw new Error('remove failed');
+      mockStore.delete(k);
+    };
   },
 }));
 
@@ -267,6 +275,8 @@ describe('offline cold start (owner decision M3)', () => {
   const cached = () => mockStore.get('aiaia.offline_active.v1') ?? null;
   beforeEach(() => {
     mockStore.clear();
+    mockRemoveFails = false;
+    mockSetGate = null;
     mockClearAll.mockClear();
     mockAuth.storedUserId.mockReset().mockResolvedValue(null);
   });
@@ -336,13 +346,40 @@ describe('offline cold start (owner decision M3)', () => {
     expect(cached()).toBeNull();
   });
 
-  it('a real sign-out (SIGNED_OUT) deletes the cache and the packs', async () => {
+  it('a real sign-out (SIGNED_OUT) deletes the cache and the packs, on its own (a saved session id exists)', async () => {
+    mockAuth.storedUserId.mockResolvedValue('user-1');
     await renderGate();
     await signIn(member('active'));
     expect(cached()).not.toBeNull();
     await act(async () => emit(null, 'SIGNED_OUT'));
     expect(cached()).toBeNull();
     expect(mockClearAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed delete still leaves no offline access (the revoke overwrites first)', async () => {
+    cache('user-1', DAY);
+    mockRemoveFails = true;
+    await renderGate();
+    await signIn(member('suspended'));
+    expect(state()).toBe('blocked');
+    await screen.unmount();
+    await renderGate();
+    await signIn(OFFLINE);
+    expect(state()).toBe('loading');
+  });
+
+  it('an active answer that lands after SIGNED_OUT leaves no cache', async () => {
+    let release!: () => void;
+    mockSetGate = new Promise<void>((r) => (release = r));
+    await renderGate();
+    mockAuth.loadMembership.mockResolvedValue(member('active'));
+    await act(async () => emit(SESSION, 'INITIAL_SESSION'));
+    await act(async () => emit(null, 'SIGNED_OUT'));
+    await act(async () => {
+      release();
+    });
+    expect(cached()).toBeNull();
+    expect(state()).toBe('signed_out');
   });
 
   it('no saved session at all is signed_out and clears the packs', async () => {
