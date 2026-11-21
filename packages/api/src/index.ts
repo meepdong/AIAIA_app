@@ -5,6 +5,7 @@ import { createAuthApi } from './auth';
 import { createDirectoryApi } from './directory';
 import { createEventsApi } from './events';
 import { createImportApi } from './import';
+import { createProfileApi } from './profile';
 import { createSettingsApi } from './settings';
 
 /**
@@ -23,6 +24,7 @@ export function createApi(client: Client) {
     auth: createAuthApi(client),
     directory: createDirectoryApi(client),
     events: createEventsApi(client),
+    profile: createProfileApi(client),
     roster: createImportApi(client),
     settings: createSettingsApi(client),
     _client: client,
@@ -30,6 +32,7 @@ export function createApi(client: Client) {
 }
 
 export type Api = ReturnType<typeof createApi>;
+export type { InfoRequest } from './profile';
 export * from './events';
 export * from './admin';
 export * from './import';
