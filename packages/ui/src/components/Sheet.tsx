@@ -14,7 +14,7 @@ export type SheetProps = {
 
 /** Bottom sheet. Tapping the dimmed area, or Android back, closes it. */
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, scheme, tokens } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <Modal
@@ -29,7 +29,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
           accessible={false}
           importantForAccessibility="no"
           onPress={onClose}
-          style={{ ...absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          style={{ ...absoluteFill, backgroundColor: overlays.scrim }}
         />
         <View
           accessibilityViewIsModal
@@ -37,13 +37,13 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
             {
               maxHeight: '80%',
               backgroundColor: colors.surface,
-              borderTopLeftRadius: tokens.radius.lg,
-              borderTopRightRadius: tokens.radius.lg,
+              borderTopLeftRadius: tokens.radius.xl,
+              borderTopRightRadius: tokens.radius.xl,
               padding: tokens.spacing[4],
               paddingBottom: tokens.spacing[4] + insets.bottom,
               gap: tokens.spacing[3],
             },
-            elevationStyle('lg'),
+            elevationStyle('lg', scheme),
           ]}
         >
           {title ? <Text variant="heading">{title}</Text> : null}

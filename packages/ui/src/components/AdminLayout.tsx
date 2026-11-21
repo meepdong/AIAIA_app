@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import { focusRing, minHit, stateOverlay, type PressState } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Header } from './Header';
 import { IconButton } from './IconButton';
@@ -29,7 +29,7 @@ export function AdminLayout({
   children,
   breakpoint = 1024,
 }: AdminLayoutProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const wide = width >= breakpoint;
@@ -53,18 +53,20 @@ export function AdminLayout({
                 justifyContent: 'center',
                 paddingHorizontal: tokens.spacing[3],
                 borderRadius: tokens.radius.md,
-                backgroundColor: active
-                  ? colors.primary
-                  : s.hovered
-                    ? colors.surfaceAlt
-                    : 'transparent',
+                // Selected is a quiet fill with semibold text, as in Astryx's selected tab.
+                backgroundColor: active ? overlays.fill : 'transparent',
               },
-              s.focused && focusRing(colors.text),
+              s.focused && focusRing(colors.focus),
             ]}
           >
-            <Text bold={active} style={{ color: active ? colors.onPrimary : colors.text }}>
-              {item.label}
-            </Text>
+            {(s: PressState) => (
+              <>
+                {stateOverlay(s, overlays, tokens.radius.md)}
+                <Text bold={active} tone={active ? 'text' : 'textMuted'}>
+                  {item.label}
+                </Text>
+              </>
+            )}
           </Pressable>
         );
       })}
@@ -73,8 +75,15 @@ export function AdminLayout({
 
   if (wide) {
     return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.surface }}>
-        <View style={{ width: 260, borderRightWidth: 1, borderRightColor: colors.surfaceAlt }}>
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+        <View
+          style={{
+            width: 260,
+            backgroundColor: colors.surface,
+            borderRightWidth: 1,
+            borderRightColor: colors.divider,
+          }}
+        >
           <View style={{ padding: tokens.spacing[4] }}>
             <Text variant="heading">{title}</Text>
           </View>
@@ -88,7 +97,7 @@ export function AdminLayout({
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
         title={title}
         right={
@@ -117,7 +126,7 @@ export function AdminLayout({
             accessibilityRole="button"
             accessibilityLabel="Close menu"
             onPress={() => setOpen(false)}
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+            style={{ flex: 1, backgroundColor: overlays.scrim }}
           />
         </View>
       </Modal>

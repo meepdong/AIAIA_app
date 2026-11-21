@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from 'react';
 import { Pressable, View } from 'react-native';
-import { elevationStyle, minHit } from '../internal/interactive';
+import {
+  elevationStyle,
+  focusRing,
+  minHit,
+  onPrimaryOverlays,
+  stateOverlay,
+  type PressState,
+} from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -57,7 +64,7 @@ function subscribe(listener: () => void) {
 }
 
 export function ToastHost() {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, scheme, tokens } = useTheme();
   const list = useSyncExternalStore(
     subscribe,
     () => items,
@@ -81,7 +88,13 @@ export function ToastHost() {
       }}
     >
       {list.map((t) => {
-        const accent = t.tone === 'neutral' ? colors.border : colors[t.tone];
+        // Muted fill pairs like the Astryx Banner; a neutral toast is the inverse (primary) pair.
+        const pair = {
+          neutral: { bg: colors.primary, fg: colors.onPrimary },
+          success: { bg: colors.successMuted, fg: colors.onSuccessMuted },
+          warning: { bg: colors.warningMuted, fg: colors.onWarningMuted },
+          danger: { bg: colors.dangerMuted, fg: colors.onDangerMuted },
+        }[t.tone];
         return (
           <Pressable
             key={t.id}
@@ -89,23 +102,33 @@ export function ToastHost() {
             accessibilityLabel={t.message}
             accessibilityHint="Double tap to dismiss"
             onPress={() => dismiss(t.id)}
-            style={[
+            style={(s: PressState) => [
               minHit,
               {
                 maxWidth: 480,
                 width: '100%',
                 justifyContent: 'center',
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderLeftWidth: 4,
-                borderColor: accent,
-                borderRadius: tokens.radius.md,
-                padding: tokens.spacing[3],
+                backgroundColor: pair.bg,
+                borderRadius: tokens.radius.lg,
+                paddingVertical: tokens.spacing[3],
+                paddingHorizontal: tokens.spacing[4],
               },
-              elevationStyle('md'),
+              elevationStyle('md', scheme),
+              s.focused && focusRing(colors.focus),
             ]}
           >
-            <Text>{t.message}</Text>
+            {(s: PressState) => (
+              <>
+                {stateOverlay(
+                  s,
+                  t.tone === 'neutral' ? onPrimaryOverlays(scheme) : overlays,
+                  tokens.radius.lg,
+                )}
+                <Text variant="label" style={{ color: pair.fg }}>
+                  {t.message}
+                </Text>
+              </>
+            )}
           </Pressable>
         );
       })}

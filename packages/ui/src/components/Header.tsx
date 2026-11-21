@@ -29,7 +29,7 @@ export function Header({ title, subtitle, onBack, backLabel = 'Go back', right }
         paddingVertical: tokens.spacing[2],
         backgroundColor: colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: colors.surfaceAlt,
+        borderBottomColor: colors.divider,
       }}
     >
       {onBack ? (

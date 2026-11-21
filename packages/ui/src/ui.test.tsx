@@ -5,7 +5,19 @@ import { Dimensions, StyleSheet, Text as RNText } from 'react-native';
 import { Header } from './components/Header';
 import { Sheet } from './components/Sheet';
 import { Button } from './components/Button';
+import { IconButton } from './components/IconButton';
+import { TextField } from './components/TextField';
+import { Select } from './components/Select';
+import { Tag } from './components/Tag';
+import { Badge } from './components/Badge';
+import { Avatar } from './components/Avatar';
+import { Text } from './components/Text';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { Card } from './components/Card';
+import { Screen } from './components/Screen';
+import { ListItem } from './components/ListItem';
+import { ToastHost, toast } from './components/Toast';
+import { ThemeProvider } from './theme';
 import { QueryState, type QueryLike } from './components/QueryState';
 import { toIsoDate } from './components/DateField';
 import { toNationalNumber } from './components/PhoneField';
@@ -160,6 +172,60 @@ describe('tokens', () => {
       expect(contrast(c.onPrimary, tone)).toBeGreaterThanOrEqual(4.5);
     }
   });
+
+  it.each(['light', 'dark'] as const)('%s theme muted pairs and info meet AA', (scheme) => {
+    const c = tokens.colors[scheme];
+    const pairs = [
+      ['onInfoMuted', c.onInfoMuted, c.infoMuted],
+      ['onSuccessMuted', c.onSuccessMuted, c.successMuted],
+      ['onWarningMuted', c.onWarningMuted, c.warningMuted],
+      ['onDangerMuted', c.onDangerMuted, c.dangerMuted],
+    ] as const;
+    for (const [name, fg, bg] of pairs) {
+      expect([name, contrast(fg, bg) >= 4.5]).toEqual([name, true]);
+    }
+    expect(contrast(c.info, c.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c.onPrimary, c.info)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c.border, c.background)).toBeGreaterThanOrEqual(3);
+    expect(contrast(c.focus, c.surface)).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(['light', 'dark'] as const)('%s theme layers are distinct', (scheme) => {
+    const c = tokens.colors[scheme];
+    expect(c.divider.toLowerCase()).not.toBe(c.surface.toLowerCase());
+    expect(c.background.toLowerCase()).not.toBe(c.surface.toLowerCase());
+    expect(c.neutral.toLowerCase()).not.toBe(c.surface.toLowerCase());
+  });
+
+  it('carries the Astryx radius, motion and per-scheme shadow tokens', () => {
+    expect(tokens.radius).toMatchObject({ sm: 6, md: 10, lg: 12, xl: 28, full: 9999 });
+    expect(tokens.motion).toMatchObject({ fast: 125, medium: 300, slow: 700 });
+    expect(tokens.motion.easeStandard).toEqual([0.24, 1, 0.4, 1]);
+    for (const key of ['sm', 'md', 'lg'] as const) {
+      expect(tokens.elevation[key].boxShadowDark).toContain('inset');
+      expect(tokens.elevation[key].boxShadow).not.toContain('inset');
+    }
+  });
+
+  it('Text uses the Figtree face for its weight', async () => {
+    await render(
+      <>
+        <Text>plain body</Text>
+        <Text variant="heading">a heading</Text>
+        <Text bold>bold body</Text>
+      </>,
+    );
+    const family = (label: string) => StyleSheet.flatten(screen.getByText(label).props.style);
+    expect(family('plain body')).toMatchObject({
+      fontFamily: 'Figtree_400Regular',
+      fontWeight: '400',
+    });
+    expect(family('a heading')).toMatchObject({
+      fontFamily: 'Figtree_600SemiBold',
+      fontWeight: '600',
+    });
+    expect(family('bold body')).toMatchObject({ fontFamily: 'Figtree_600SemiBold' });
+  });
 });
 
 describe('Header', () => {
@@ -199,5 +265,244 @@ describe('Sheet', () => {
     while (panel && !panel.props.accessibilityViewIsModal) panel = panel.parent;
     const flat = StyleSheet.flatten(panel?.props.style);
     expect(flat.paddingBottom).toBe(tokens.spacing[4] + 34);
+  });
+});
+
+describe('Astryx controls', () => {
+  const flat = (node: { props: { style?: unknown } }) =>
+    StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+  /** The nearest ancestor (or the node itself) whose style draws a border. */
+  const boxOf = (node: { props: { style?: unknown }; parent: unknown }) => {
+    let cur = node as { props: { style?: unknown }; parent: unknown } | null;
+    while (cur && flat(cur).borderWidth === undefined) {
+      cur = cur.parent as typeof cur;
+    }
+    return flat(cur as never);
+  };
+  const light = tokens.colors.light;
+
+  it('draws the secondary button as a borderless translucent fill', async () => {
+    await render(<Button title="Cancel" variant="secondary" />);
+    const style = flat(screen.getByRole('button', { name: 'Cancel' }));
+    expect(style.borderWidth ?? 0).toBe(0);
+    expect(style.backgroundColor).toBe(tokens.overlays.light.fill);
+  });
+
+  it('uses the control border at rest and the danger colour on error', async () => {
+    await render(
+      <>
+        <TextField label="Name" />
+        <TextField label="Email" error="Enter a valid email" />
+      </>,
+    );
+    expect(boxOf(screen.getByLabelText('Name')).borderColor).toBe(light.border);
+    expect(boxOf(screen.getByLabelText('Email')).borderColor).toBe(light.danger);
+  });
+
+  it('keeps a 44 pt target on every pressable control', async () => {
+    await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 360, height: 640 },
+          insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        }}
+      >
+        <Button title="Save" />
+        <IconButton accessibilityLabel="Add" icon={<RNText>+</RNText>} />
+        <TextField label="Name" />
+        <Select
+          label="Role"
+          options={[{ label: 'Youth', value: 'youth' }]}
+          value={null}
+          onChange={() => {}}
+        />
+        <Tag label="Youth" onPress={() => {}} />
+      </SafeAreaProvider>,
+    );
+    const min = (n: { props: { style?: unknown } }) => flat(n).minHeight as number;
+    expect(min(screen.getByRole('button', { name: 'Save' }))).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Add' }))).toBeGreaterThanOrEqual(44);
+    expect(boxOf(screen.getByLabelText('Name')).minHeight).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Role, Select' }))).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Youth' }))).toBeGreaterThanOrEqual(44);
+  });
+
+  it('renders the label variant in Figtree medium', async () => {
+    await render(<Text variant="label">A label</Text>);
+    expect(flat(screen.getByText('A label'))).toMatchObject({
+      fontFamily: 'Figtree_500Medium',
+      fontWeight: '500',
+    });
+  });
+});
+
+describe('Astryx layout and feedback', () => {
+  const flat = (node: { props: { style?: unknown } }) =>
+    (StyleSheet.flatten(node.props.style as never) as Record<string, unknown>) ?? {};
+  type Node = { props: { style?: unknown; [k: string]: unknown }; parent: Node | null };
+  /** The nearest ancestor (or the node itself) whose flattened style has `key`. */
+  const up = (node: Node, key: string) => {
+    let cur: Node | null = node;
+    while (cur && flat(cur)[key] === undefined) cur = cur.parent;
+    return flat(cur as never);
+  };
+  const metrics = {
+    frame: { x: 0, y: 0, width: 360, height: 640 },
+    insets: { top: 0, left: 0, right: 0, bottom: 0 },
+  };
+  const light = tokens.colors.light;
+
+  it('outlines a Card with a 1 px divider and no resting shadow', async () => {
+    await render(
+      <Card>
+        <RNText>card body</RNText>
+      </Card>,
+    );
+    const style = flat(screen.getByText('card body').parent as never);
+    expect(style.borderColor).toBe(light.divider);
+    expect(style.borderWidth).toBe(1);
+    expect(style.boxShadow).toBeUndefined();
+    expect(style.elevation).toBeUndefined();
+  });
+
+  it('paints a Screen on the page background', async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <Screen>
+          <RNText>page body</RNText>
+        </Screen>
+      </SafeAreaProvider>,
+    );
+    expect(up(screen.getByText('page body') as never, 'backgroundColor').backgroundColor).toBe(
+      light.background,
+    );
+  });
+
+  it('uses the dark shadow token for a Sheet in the dark scheme', async () => {
+    await render(
+      <ThemeProvider scheme="dark">
+        <SafeAreaProvider initialMetrics={metrics}>
+          <Sheet visible onClose={() => {}} title="Pick one">
+            <RNText>body</RNText>
+          </Sheet>
+        </SafeAreaProvider>
+      </ThemeProvider>,
+    );
+    const panel = up(screen.getByText('Pick one') as never, 'boxShadow');
+    expect(panel.boxShadow).toBe(tokens.elevation.lg.boxShadowDark);
+    expect(panel.borderTopLeftRadius).toBe(tokens.radius.xl);
+  });
+
+  it('uses the dark shadow token for a ConfirmDialog in the dark scheme', async () => {
+    await render(
+      <ThemeProvider scheme="dark">
+        <ConfirmDialog visible title="Delete?" onConfirm={jest.fn()} onCancel={jest.fn()} />
+      </ThemeProvider>,
+    );
+    expect(up(screen.getByText('Delete?') as never, 'boxShadow').boxShadow).toBe(
+      tokens.elevation.lg.boxShadowDark,
+    );
+    expect(
+      flat(screen.getByTestId('confirm-backdrop', { includeHiddenElements: true })).backgroundColor,
+    ).toBe(tokens.overlays.dark.scrim);
+  });
+
+  it('fills a toast with the muted pair for its tone', async () => {
+    toast.clear();
+    await render(<ToastHost />);
+    await act(async () => {
+      toast.success('Saved');
+    });
+    const pill = screen.getByRole('alert');
+    expect(flat(pill).backgroundColor).toBe(light.successMuted);
+    expect(flat(screen.getByText('Saved')).color).toBe(light.onSuccessMuted);
+    expect(flat(pill).borderRadius).toBe(tokens.radius.lg);
+    await act(async () => toast.clear());
+  });
+
+  it('keeps pressable list rows at 44 pt', async () => {
+    await render(<ListItem title="Row" onPress={() => {}} />);
+    expect(up(screen.getByText('Row') as never, 'minHeight').minHeight).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe('Astryx fix round 1', () => {
+  it('keeps a plain Tag at 20 pt, centred, beside 44 pt tags in a row', async () => {
+    await render(<Tag label="Youth" />);
+    let node = screen.getByText('Youth').parent as { props: { style?: unknown }; parent: unknown };
+    const aligned: unknown[] = [];
+    while (node) {
+      const st = StyleSheet.flatten(node.props.style as never) as
+        { alignSelf?: string } | undefined;
+      if (st?.alignSelf) aligned.push(st.alignSelf);
+      node = node.parent as typeof node;
+    }
+    expect(aligned).toContain('center');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'paints a pressed primary Button with the inverted overlay, not the secondary one (%s)',
+    async (scheme) => {
+      const inverse = scheme === 'light' ? 'dark' : 'light';
+      const pressed = async (variant: 'primary' | 'secondary') => {
+        const view = await render(
+          <ThemeProvider scheme={scheme}>
+            <Button title="Go" variant={variant} />
+          </ThemeProvider>,
+        );
+        await fireEvent(screen.getByRole('button', { name: 'Go' }), 'responderGrant', {
+          nativeEvent: { touches: [], pageX: 0, pageY: 0, timestamp: 0 },
+          persist() {},
+          currentTarget: { measure: () => {} },
+          target: {},
+        });
+        const json = JSON.stringify(screen.toJSON());
+        await view.unmount();
+        return json;
+      };
+      const primary = await pressed('primary');
+      const secondary = await pressed('secondary');
+      expect(primary).toContain(tokens.overlays[inverse].pressed);
+      expect(primary).not.toContain(tokens.overlays[scheme].pressed);
+      expect(secondary).toContain(tokens.overlays[scheme].pressed);
+    },
+  );
+});
+
+describe('Astryx fix round 2: badge, tag and avatar mapping', () => {
+  const styleOf = (node: unknown) =>
+    StyleSheet.flatten((node as { props: { style?: never } }).props.style) ?? {};
+
+  it.each([
+    ['success', 'successMuted', 'onSuccessMuted'],
+    ['danger', 'dangerMuted', 'onDangerMuted'],
+  ] as const)('paints a %s Badge with its muted pair', async (tone, fill, text) => {
+    await render(<Badge label="State" tone={tone} />);
+    const label = screen.getByText('State');
+    expect(styleOf(label).color).toBe(tokens.colors.light[text]);
+    expect(styleOf(label.parent).backgroundColor).toBe(tokens.colors.light[fill]);
+  });
+
+  it('keeps Badge and a plain Tag at 20 pt', async () => {
+    await render(
+      <>
+        <Badge label="B" />
+        <Tag label="T" />
+      </>,
+    );
+    expect(styleOf(screen.getByText('B').parent).minHeight).toBe(tokens.spacing[5]);
+    expect(styleOf(screen.getByText('T').parent).minHeight).toBe(tokens.spacing[5]);
+  });
+
+  it('sizes Avatar initials at 0.4 of the avatar size', async () => {
+    await render(<Avatar name="Asha Rao" size={60} />);
+    expect(styleOf(screen.getByText('AR')).fontSize).toBe(24);
+  });
+
+  it('gives a remove-only Tag a 44 pt wrapper', async () => {
+    await render(<Tag label="Youth" onRemove={() => {}} />);
+    const wrapper = screen.getByText('Youth').parent?.parent;
+    expect(styleOf(wrapper).minHeight).toBeGreaterThanOrEqual(tokens.minHitArea);
+    expect(styleOf(wrapper).minWidth).toBeGreaterThanOrEqual(tokens.minHitArea);
   });
 });

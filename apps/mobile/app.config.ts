@@ -52,6 +52,19 @@ const config: ExpoConfig = {
     'expo-router',
     'expo-secure-store',
     'expo-sqlite',
+    // Embeds Figtree in the Android build so text is right on first paint; the JS loader in
+    // app/_layout.tsx covers web.
+    [
+      'expo-font',
+      {
+        fonts: [
+          '../../node_modules/@expo-google-fonts/figtree/400Regular/Figtree_400Regular.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/500Medium/Figtree_500Medium.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/600SemiBold/Figtree_600SemiBold.ttf',
+          '../../node_modules/@expo-google-fonts/figtree/700Bold/Figtree_700Bold.ttf',
+        ],
+      },
+    ],
     [
       'expo-camera',
       {
