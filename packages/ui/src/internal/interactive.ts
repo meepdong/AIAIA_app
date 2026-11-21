@@ -94,3 +94,12 @@ export const minHit: ViewStyle = {
 
 /** Removes the browser outline on a text input whose wrapper draws the focus ring (web only). */
 export const noOutline = { outlineStyle: 'none' } as unknown as TextStyle;
+
+/**
+ * Overlays for a control filled with `colors.primary`. The normal overlays are black-alpha in light
+ * and white-alpha in dark, which is invisible on a near-black or near-white fill. The other
+ * scheme's overlays are the inverse sign at the same alpha steps.
+ */
+export function onPrimaryOverlays(scheme: ColorScheme): OverlayPalette {
+  return tokens.overlays[scheme === 'dark' ? 'light' : 'dark'];
+}

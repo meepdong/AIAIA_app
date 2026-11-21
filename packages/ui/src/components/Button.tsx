@@ -10,6 +10,7 @@ import {
 import {
   focusRing,
   minHit,
+  onPrimaryOverlays,
   pressScale,
   stateOverlay,
   type PressState,
@@ -41,7 +42,7 @@ export function Button({
   style,
   ...rest
 }: ButtonProps) {
-  const { colors, overlays, tokens } = useTheme();
+  const { colors, overlays, scheme, tokens } = useTheme();
   const inactive = Boolean(disabled) || loading;
 
   // No borders: the fill carries the shape. Secondary is a translucent neutral so it sits on any
@@ -82,7 +83,13 @@ export function Button({
     >
       {(state: PressState) => (
         <>
-          {inactive ? null : stateOverlay(state, overlays, tokens.radius.md)}
+          {inactive
+            ? null
+            : stateOverlay(
+                state,
+                variant === 'primary' ? onPrimaryOverlays(scheme) : overlays,
+                tokens.radius.md,
+              )}
           {loading ? (
             <ActivityIndicator size="small" color={palette.fg} />
           ) : icon ? (

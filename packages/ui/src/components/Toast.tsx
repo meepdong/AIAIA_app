@@ -4,6 +4,7 @@ import {
   elevationStyle,
   focusRing,
   minHit,
+  onPrimaryOverlays,
   stateOverlay,
   type PressState,
 } from '../internal/interactive';
@@ -118,7 +119,11 @@ export function ToastHost() {
           >
             {(s: PressState) => (
               <>
-                {stateOverlay(s, overlays, tokens.radius.lg)}
+                {stateOverlay(
+                  s,
+                  t.tone === 'neutral' ? onPrimaryOverlays(scheme) : overlays,
+                  tokens.radius.lg,
+                )}
                 <Text variant="label" style={{ color: pair.fg }}>
                   {t.message}
                 </Text>

@@ -423,3 +423,46 @@ describe('Astryx layout and feedback', () => {
     expect(up(screen.getByText('Row') as never, 'minHeight').minHeight).toBeGreaterThanOrEqual(44);
   });
 });
+
+describe('Astryx fix round 1', () => {
+  it('keeps a plain Tag at 20 pt, centred, beside 44 pt tags in a row', async () => {
+    await render(<Tag label="Youth" />);
+    let node = screen.getByText('Youth').parent as { props: { style?: unknown }; parent: unknown };
+    const aligned: unknown[] = [];
+    while (node) {
+      const st = StyleSheet.flatten(node.props.style as never) as
+        { alignSelf?: string } | undefined;
+      if (st?.alignSelf) aligned.push(st.alignSelf);
+      node = node.parent as typeof node;
+    }
+    expect(aligned).toContain('center');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'paints a pressed primary Button with the inverted overlay, not the secondary one (%s)',
+    async (scheme) => {
+      const inverse = scheme === 'light' ? 'dark' : 'light';
+      const pressed = async (variant: 'primary' | 'secondary') => {
+        const view = await render(
+          <ThemeProvider scheme={scheme}>
+            <Button title="Go" variant={variant} />
+          </ThemeProvider>,
+        );
+        await fireEvent(screen.getByRole('button', { name: 'Go' }), 'responderGrant', {
+          nativeEvent: { touches: [], pageX: 0, pageY: 0, timestamp: 0 },
+          persist() {},
+          currentTarget: { measure: () => {} },
+          target: {},
+        });
+        const json = JSON.stringify(screen.toJSON());
+        await view.unmount();
+        return json;
+      };
+      const primary = await pressed('primary');
+      const secondary = await pressed('secondary');
+      expect(primary).toContain(tokens.overlays[inverse].pressed);
+      expect(primary).not.toContain(tokens.overlays[scheme].pressed);
+      expect(secondary).toContain(tokens.overlays[scheme].pressed);
+    },
+  );
+});
