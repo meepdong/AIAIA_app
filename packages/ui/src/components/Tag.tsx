@@ -60,7 +60,10 @@ export function Tag({ label, selected, onPress, onRemove, accessibilityLabel }: 
     </View>
   );
   if (!onPress) {
-    if (!onRemove) return chip();
+    if (!onRemove) {
+      // alignSelf keeps the chip at its 20 pt height, centred, beside 44 pt pressable tags in a row.
+      return <View style={{ alignSelf: 'center' }}>{chip()}</View>;
+    }
     // The remove control is a real target: give the row a full 44 pt height.
     return (
       <View style={[minHit, { justifyContent: 'center', alignSelf: 'flex-start' }]}>{chip()}</View>
