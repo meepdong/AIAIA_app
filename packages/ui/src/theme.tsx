@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
-import { tokens, type ColorPalette, type ColorScheme } from './tokens';
+import { tokens, type ColorPalette, type ColorScheme, type OverlayPalette } from './tokens';
 
 type ThemeContextValue = { scheme: ColorScheme | null };
 
@@ -18,6 +18,7 @@ export function ThemeProvider({ scheme, children }: { scheme: ColorScheme; child
 export type Theme = {
   scheme: ColorScheme;
   colors: ColorPalette;
+  overlays: OverlayPalette;
   tokens: typeof tokens;
 };
 
@@ -25,5 +26,8 @@ export function useTheme(): Theme {
   const forced = useContext(ThemeContext).scheme;
   const system = useColorScheme();
   const scheme: ColorScheme = forced ?? (system === 'dark' ? 'dark' : 'light');
-  return useMemo(() => ({ scheme, colors: tokens.colors[scheme], tokens }), [scheme]);
+  return useMemo(
+    () => ({ scheme, colors: tokens.colors[scheme], overlays: tokens.overlays[scheme], tokens }),
+    [scheme],
+  );
 }

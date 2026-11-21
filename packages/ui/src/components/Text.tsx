@@ -14,7 +14,8 @@ export function Text({ variant = 'body', tone = 'text', bold, style, ...rest }: 
   const { colors, tokens } = useTheme();
   const scale = tokens.fontSize[variant];
   const isHeading = variant === 'heading' || variant === 'title' || variant === 'display';
-  const weight = bold || isHeading ? '600' : '400';
+  // Labels (field labels, button text) are medium weight; bold still asks for semibold.
+  const weight = bold || isHeading ? '600' : variant === 'label' ? '500' : '400';
   return (
     <RNText
       accessibilityRole={isHeading ? 'header' : undefined}

@@ -32,6 +32,13 @@ export const COLOR_ROLES = [
 export type ColorRole = (typeof COLOR_ROLES)[number];
 export type ColorScheme = 'light' | 'dark';
 export type ColorPalette = Record<ColorRole, string>;
+/**
+ * Translucent paints (8-digit hex) that work over any background: `fill` for the secondary button
+ * and neutral badge, `hover` and `pressed` for interaction states. Outside COLOR_ROLES on purpose:
+ * the colour roles are opaque six-digit hex.
+ */
+export type OverlayRole = 'fill' | 'hover' | 'pressed';
+export type OverlayPalette = Record<OverlayRole, string>;
 
 export type TextVariant = keyof typeof raw.fontSize;
 export type SpacingKey = keyof typeof raw.spacing;
@@ -42,6 +49,7 @@ export type FontWeightKey = keyof typeof raw.fontFamily;
 
 export const tokens = {
   colors: raw.colors as Record<ColorScheme, ColorPalette>,
+  overlays: raw.overlays as Record<ColorScheme, OverlayPalette>,
   spacing: raw.spacing,
   radius: raw.radius,
   fontSize: raw.fontSize,

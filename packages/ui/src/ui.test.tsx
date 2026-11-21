@@ -5,6 +5,10 @@ import { Dimensions, StyleSheet, Text as RNText } from 'react-native';
 import { Header } from './components/Header';
 import { Sheet } from './components/Sheet';
 import { Button } from './components/Button';
+import { IconButton } from './components/IconButton';
+import { TextField } from './components/TextField';
+import { Select } from './components/Select';
+import { Tag } from './components/Tag';
 import { Text } from './components/Text';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { QueryState, type QueryLike } from './components/QueryState';
@@ -254,5 +258,73 @@ describe('Sheet', () => {
     while (panel && !panel.props.accessibilityViewIsModal) panel = panel.parent;
     const flat = StyleSheet.flatten(panel?.props.style);
     expect(flat.paddingBottom).toBe(tokens.spacing[4] + 34);
+  });
+});
+
+describe('Astryx controls', () => {
+  const flat = (node: { props: { style?: unknown } }) =>
+    StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+  /** The nearest ancestor (or the node itself) whose style draws a border. */
+  const boxOf = (node: { props: { style?: unknown }; parent: unknown }) => {
+    let cur = node as { props: { style?: unknown }; parent: unknown } | null;
+    while (cur && flat(cur).borderWidth === undefined) {
+      cur = cur.parent as typeof cur;
+    }
+    return flat(cur as never);
+  };
+  const light = tokens.colors.light;
+
+  it('draws the secondary button as a borderless translucent fill', async () => {
+    await render(<Button title="Cancel" variant="secondary" />);
+    const style = flat(screen.getByRole('button', { name: 'Cancel' }));
+    expect(style.borderWidth ?? 0).toBe(0);
+    expect(style.backgroundColor).toBe(tokens.overlays.light.fill);
+  });
+
+  it('uses the control border at rest and the danger colour on error', async () => {
+    await render(
+      <>
+        <TextField label="Name" />
+        <TextField label="Email" error="Enter a valid email" />
+      </>,
+    );
+    expect(boxOf(screen.getByLabelText('Name')).borderColor).toBe(light.border);
+    expect(boxOf(screen.getByLabelText('Email')).borderColor).toBe(light.danger);
+  });
+
+  it('keeps a 44 pt target on every pressable control', async () => {
+    await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 360, height: 640 },
+          insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        }}
+      >
+        <Button title="Save" />
+        <IconButton accessibilityLabel="Add" icon={<RNText>+</RNText>} />
+        <TextField label="Name" />
+        <Select
+          label="Role"
+          options={[{ label: 'Youth', value: 'youth' }]}
+          value={null}
+          onChange={() => {}}
+        />
+        <Tag label="Youth" onPress={() => {}} />
+      </SafeAreaProvider>,
+    );
+    const min = (n: { props: { style?: unknown } }) => flat(n).minHeight as number;
+    expect(min(screen.getByRole('button', { name: 'Save' }))).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Add' }))).toBeGreaterThanOrEqual(44);
+    expect(boxOf(screen.getByLabelText('Name')).minHeight).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Role, Select' }))).toBeGreaterThanOrEqual(44);
+    expect(min(screen.getByRole('button', { name: 'Youth' }))).toBeGreaterThanOrEqual(44);
+  });
+
+  it('renders the label variant in Figtree medium', async () => {
+    await render(<Text variant="label">A label</Text>);
+    expect(flat(screen.getByText('A label'))).toMatchObject({
+      fontFamily: 'Figtree_500Medium',
+      fontWeight: '500',
+    });
   });
 });

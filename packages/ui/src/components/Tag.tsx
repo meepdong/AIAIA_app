@@ -1,5 +1,5 @@
 import { Pressable, View } from 'react-native';
-import { focusRing, minHit, type PressState } from '../internal/interactive';
+import { focusRing, minHit, stateOverlay, type PressState } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -14,22 +14,31 @@ export type TagProps = {
 };
 
 export function Tag({ label, selected, onPress, onRemove, accessibilityLabel }: TagProps) {
-  const { colors, tokens } = useTheme();
-  const bg = selected ? colors.primary : colors.surfaceAlt;
+  const { colors, overlays, tokens } = useTheme();
+  const bg = selected ? colors.primary : overlays.fill;
   const fg = selected ? colors.onPrimary : colors.text;
-  const chip = (
+  const chip = (state?: PressState) => (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: tokens.spacing[1],
+        minHeight: tokens.spacing[5],
         backgroundColor: bg,
         borderRadius: tokens.radius.full,
-        paddingHorizontal: tokens.spacing[3],
-        paddingVertical: tokens.spacing[1],
+        paddingHorizontal: tokens.spacing[2],
       }}
     >
-      <Text variant="label" style={{ color: fg }}>
+      {state ? stateOverlay(state, overlays, tokens.radius.full) : null}
+      <Text
+        variant="caption"
+        style={{
+          color: fg,
+          lineHeight: tokens.spacing[5],
+          fontFamily: tokens.fontFamily['500'],
+          fontWeight: '500',
+        }}
+      >
         {label}
       </Text>
       {onRemove ? (
@@ -38,19 +47,25 @@ export function Tag({ label, selected, onPress, onRemove, accessibilityLabel }: 
           accessibilityLabel={`Remove ${label}`}
           onPress={onRemove}
           hitSlop={tokens.spacing[3]}
-          style={(state: PressState) => [
-            { paddingHorizontal: tokens.spacing[1] },
-            state.focused && focusRing(colors.text),
+          style={(s: PressState) => [
+            { paddingHorizontal: tokens.spacing[1], borderRadius: tokens.radius.full },
+            s.focused && focusRing(colors.focus),
           ]}
         >
-          <Text variant="label" style={{ color: fg }}>
+          <Text variant="caption" style={{ color: fg, lineHeight: tokens.spacing[5] }}>
             {'×'}
           </Text>
         </Pressable>
       ) : null}
     </View>
   );
-  if (!onPress) return chip;
+  if (!onPress) {
+    if (!onRemove) return chip();
+    // The remove control is a real target: give the row a full 44 pt height.
+    return (
+      <View style={[minHit, { justifyContent: 'center', alignSelf: 'flex-start' }]}>{chip()}</View>
+    );
+  }
   return (
     <Pressable
       accessibilityRole="button"
@@ -60,11 +75,10 @@ export function Tag({ label, selected, onPress, onRemove, accessibilityLabel }: 
       style={(state: PressState) => [
         minHit,
         { justifyContent: 'center', alignSelf: 'flex-start' },
-        state.focused && focusRing(colors.text),
-        state.hovered && { opacity: 0.85 },
+        state.focused && focusRing(colors.focus),
       ]}
     >
-      {chip}
+      {(state: PressState) => chip(state)}
     </Pressable>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
-import { focusRing, noOutline } from '../internal/interactive';
+import { fieldFocusStyle, noOutline } from '../internal/interactive';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -24,14 +24,12 @@ export function TextField({
   editable = true,
   ...rest
 }: TextFieldProps) {
-  const { colors, tokens } = useTheme();
+  const { colors, overlays, tokens } = useTheme();
   const [focused, setFocused] = useState(false);
   const borderColor = error ? colors.danger : colors.border;
   return (
     <View style={{ gap: tokens.spacing[1] }}>
-      <Text variant="label" bold>
-        {label}
-      </Text>
+      <Text variant="label">{label}</Text>
       <View
         style={[
           {
@@ -41,11 +39,12 @@ export function TextField({
             borderWidth: 1,
             borderColor,
             borderRadius: tokens.radius.md,
-            backgroundColor: editable ? colors.surface : colors.surfaceAlt,
+            backgroundColor: colors.surface,
+            opacity: editable ? 1 : 0.5,
             paddingHorizontal: tokens.spacing[3],
             gap: tokens.spacing[2],
           },
-          focused && focusRing(colors.text),
+          focused && fieldFocusStyle(colors, overlays, Boolean(error)),
         ]}
       >
         {prefix}
@@ -75,11 +74,11 @@ export function TextField({
         />
       </View>
       {error ? (
-        <Text variant="label" tone="danger" accessibilityLiveRegion="polite">
+        <Text variant="caption" tone="danger" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : hint ? (
-        <Text variant="label" tone="textMuted">
+        <Text variant="caption" tone="textMuted">
           {hint}
         </Text>
       ) : null}
