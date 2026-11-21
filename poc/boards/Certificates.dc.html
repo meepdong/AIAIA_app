@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Certificates</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.card{background:#FFFFFF;border:1px solid #EBEBEB;border-radius:12px;padding:16px;display:flex;gap:14px;align-items:center;text-decoration:none;color:#000000}
+a.card:hover{color:#000000;background:#FAFAFA}
+.badge{width:52px;height:52px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 12px 16px 8px">
+    <a href="More.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #000000; margin-left: -10px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 22px; line-height: 31px; font-weight: 700">Certificates</h1>
+    <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: #F0F0F0; color: #474747">Phase 2</span>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <p style="margin: 0; font-size: 15px; color: #474747">Certificates for events you attended. Each one has a code anyone can check online.</p>
+    <a class="card" href="#"><span class="badge" style="background: #FAE19E; color: #4B3900"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"></circle><path d="M9 14l-2 7 5-3 5 3-2-7"></path></svg></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 600">[Youth Leadership Camp]</b><span style="font-size: 14px; color: #474747">Participation · 5 Dec 2026</span></span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg></a>
+    <a class="card" href="#"><span class="badge" style="background: #B9D7FF; color: #003978"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"></circle><path d="M9 14l-2 7 5-3 5 3-2-7"></path></svg></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 600">[Community service drive]</b><span style="font-size: 14px; color: #474747">Volunteer · 20 hours · Aug 2026</span></span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg></a>
+    <div style="border: 1px dashed #848484; border-radius: 12px; padding: 24px 16px; text-align: center; font-size: 14px; color: #474747">[CERTIFICATE PREVIEW: name, event, date, signatory, verification QR]</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

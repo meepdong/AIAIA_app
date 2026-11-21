@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Payments</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:10px;background:#1B1B1B;color:#FFFFFF;font-weight:600;font-size:16px;text-decoration:none}
+.btn:hover{color:#FFFFFF;background:#333333}
+.list{background:#FFFFFF;border:1px solid #EBEBEB;border-radius:12px;overflow:hidden}
+.r{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #EBEBEB;text-decoration:none;color:#000000}
+.r:last-child{border-bottom:0}
+.r:hover{color:#000000;background:#FAFAFA}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 12px 16px 8px">
+    <a href="More.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #000000; margin-left: -10px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 22px; line-height: 31px; font-weight: 700">Payments</h1>
+    <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: #F0F0F0; color: #474747">Phase 2</span>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="background: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-size: 14px; color: #474747">Annual membership 2026–27</span>
+      <b style="font-size: 30px; line-height: 37px; font-weight: 700">₹ [AMOUNT]</b>
+      <span style="align-self: flex-start; font-size: 13px; font-weight: 500; padding: 2px 10px; border-radius: 9999px; background: #FAE19E; color: #4B3900">Due by 31 Dec</span>
+      <a class="btn" href="#">Pay with UPI or card</a>
+      <span style="font-size: 13px; color: #474747; text-align: center">Secured by Razorpay. A receipt is emailed to you.</span>
+    </div>
+    <h2 style="margin: 0; font-size: 18px; font-weight: 700">Receipts</h2>
+    <div class="list">
+      <a class="r" href="#"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"></path><path d="M9 7h6M9 11h6"></path></svg><span style="flex: 1; display: flex; flex-direction: column"><b style="font-weight: 600">RCPT-0001</b><span style="font-size: 14px; color: #474747">[Youth Leadership Camp] fee · 2 Nov</span></span><span style="font-weight: 600">₹ [AMT]</span></a>
+      <a class="r" href="#"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"></path><path d="M9 7h6M9 11h6"></path></svg><span style="flex: 1; display: flex; flex-direction: column"><b style="font-weight: 600">RCPT-0000</b><span style="font-size: 14px; color: #474747">Donation · 15 Aug</span></span><span style="font-weight: 600">₹ [AMT]</span></a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

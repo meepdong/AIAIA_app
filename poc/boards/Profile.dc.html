@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.list{background:#FFFFFF;border:1px solid #EBEBEB;border-radius:12px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:1px solid #EBEBEB;text-decoration:none;color:#000000}
+.li:last-child{border-bottom:0}
+.li:hover{color:#000000;background:#FAFAFA}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #EBEBEB;font-size:15px}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:#474747}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; padding: 16px 16px 8px">
+    <h1 style="flex: 1; margin: 0; font-size: 26px; line-height: 35px; font-weight: 700">Profile</h1>
+    <a href="#" style="font-size: 15px; min-height: 44px; display: flex; align-items: center">Edit</a>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; gap: 16px; align-items: center">
+      <span style="width: 72px; height: 72px; border-radius: 9999px; background: #D9D9D9; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; flex: none">EC</span>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <b style="font-size: 22px; font-weight: 700">Emily Carter</b>
+        <span style="font-size: 14px; color: #474747">[BRANCH NAME] · Youth · since Nov 2026</span>
+        <span style="align-self: flex-start; font-size: 13px; font-weight: 500; padding: 2px 10px; border-radius: 9999px; background: #BCE0BB; color: #00490B">Active member</span>
+      </div>
+    </div>
+    <div class="list">
+      <div class="kv"><span>Phone</span><span>+91 90000 00012</span></div>
+      <div class="kv"><span>Email</span><span>priya@example.com</span></div>
+      <div class="kv"><span>Date of birth</span><span>14 Mar 2007</span></div>
+      <div class="kv"><span>Visible to others</span><span>Name, branch, wing</span></div>
+    </div>
+    <div class="list">
+      <a class="li" href="MemberId.dc.html"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="11" r="2"></circle><path d="M14 10h4M14 13h3"></path></svg><span style="flex: 1">Member ID card</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="Family.dc.html"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M21 20c0-2.5-1.5-4-4-4.6"></path></svg><span style="flex: 1">Family and guardian</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="Payments.dc.html"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg><span style="flex: 1">Payments and receipts</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="Settings.dc.html"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span style="flex: 1">Settings and privacy</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+    </div>
+    <a href="Main.dc.html" style="text-align: center; font-size: 16px; color: #C0262C; min-height: 44px; display: flex; align-items: center; justify-content: center">Sign out</a>
+  </main>
+  <dc-import name="TabBar" active="profile" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

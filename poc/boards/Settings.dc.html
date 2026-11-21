@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067CE}a:hover{color:#003978}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.list{background:#FFFFFF;border:1px solid #EBEBEB;border-radius:12px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:1px solid #EBEBEB;text-decoration:none;color:#000000}
+.li:last-child{border-bottom:0}
+.sw{width:44px;height:26px;border-radius:9999px;background:#1B1B1B;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:9999px;background:#FFFFFF}
+.sw.off{background:#C9C9C9}
+.sw.off::after{right:auto;left:3px}
+.sec{margin:8px 0 0;font-size:13px;font-weight:600;color:#474747}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F1F1F1; font-family: Figtree, system-ui, sans-serif; color: #000000; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 12px 16px 8px">
+    <a href="Profile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #000000; margin-left: -10px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 22px; line-height: 31px; font-weight: 700">Settings</h1>
+  </header>
+  <main style="flex: 1; overflow: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 8px">
+    <span class="sec">NOTIFICATIONS</span>
+    <div class="list">
+      <div class="li"><span style="flex: 1">Push notifications</span><span class="sw" role="switch" aria-checked="true"></span></div>
+      <div class="li"><span style="flex: 1">WhatsApp messages</span><span class="sw" role="switch" aria-checked="true"></span></div>
+      <div class="li"><span style="flex: 1">Email</span><span class="sw off" role="switch" aria-checked="false"></span></div>
+    </div>
+    <span class="sec">PRIVACY</span>
+    <div class="list">
+      <div class="li"><span style="flex: 1; display: flex; flex-direction: column"><span>Show me in the directory</span><span style="font-size: 13px; color: #474747">Name, branch and wing only</span></span><span class="sw" role="switch" aria-checked="true"></span></div>
+      <div class="li"><span style="flex: 1">Show masked phone</span><span class="sw off" role="switch" aria-checked="false"></span></div>
+      <a class="li" href="#"><span style="flex: 1">Download my data</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+    </div>
+    <span class="sec">ACCOUNT</span>
+    <div class="list">
+      <a class="li" href="#"><span style="flex: 1">Change phone number</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="#"><span style="flex: 1">Language</span><span style="color: #474747; font-size: 15px">English</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="#"><span style="flex: 1">Theme</span><span style="color: #474747; font-size: 15px">System</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="Help.dc.html"><span style="flex: 1">Help and privacy policy</span><svg class="ic" style="color: #848484" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></a>
+      <a class="li" href="#" style="color: #C0262C"><span style="flex: 1">Delete my account</span></a>
+    </div>
+    <span style="font-size: 13px; color: #474747; text-align: center; margin-top: 8px">Version 0.1.0 (POC)</span>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
