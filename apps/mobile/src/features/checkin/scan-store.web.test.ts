@@ -35,6 +35,11 @@ const scan = (ref: string, at: string): QueuedScan => ({
 });
 
 const memory = new Map<string, string>();
+let afterEachRealTimers = false;
+afterEach(() => {
+  if (afterEachRealTimers) jest.useRealTimers();
+  afterEachRealTimers = false;
+});
 beforeEach(() => {
   memory.clear();
   (globalThis as { window?: unknown }).window = {
@@ -51,6 +56,13 @@ beforeEach(() => {
 
 describe('web scan store (localStorage), same contract as the SQLite one', () => {
   it('queue persists: a new store object still sees the scan', async () => {
+    // Pin the clock to the fixture day: a pack downloaded on 2026-11-16 would otherwise be purged
+    // as expired (one day after download) once the real date moves past 2026-11-17.
+    jest.useFakeTimers({
+      now: new Date('2026-11-16T06:00:00.000Z'),
+      doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask', 'nextTick'],
+    });
+    afterEachRealTimers = true;
     const a = await openScanStore(OWNER);
     await a.savePack(EVENT, [member], '2026-11-16T04:00:00.000Z');
     await a.addScan(scan('r1', '2026-11-16T05:00:00.000Z'));
