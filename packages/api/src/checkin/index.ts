@@ -1,5 +1,6 @@
 import type { Json } from '@aiaia/shared';
 import type { Client } from '../index';
+import { storedSessionUserId } from '../auth';
 
 export * from './format';
 export * from './verify';
@@ -153,7 +154,8 @@ export function createCheckinApi(client: Client) {
     /** The signed-in user's id from the local session (no network), to key the offline cache. */
     async cacheOwner(): Promise<string | null> {
       const { data } = await client.auth.getSession();
-      return data.session?.user.id ?? null;
+      // Offline with an expired access token, getSession() is null but the saved session stays.
+      return data.session?.user.id ?? (await storedSessionUserId(client));
     },
 
     /** Whether the caller may scan for this event (listed check_in staff, or an event officer). */

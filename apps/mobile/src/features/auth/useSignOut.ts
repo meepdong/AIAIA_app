@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { clearPassCache } from '@/features/checkin/pass-cache';
 import { clearScanData } from '@/features/checkin/scan-store';
+import { clearOfflineActive } from '@/lib/offline-access';
 import { getPushToken } from './push-token';
 import { useApi } from './useApi';
 
@@ -19,6 +20,9 @@ export function useSignOut(): () => Promise<Awaited<ReturnType<Api['auth']['sign
     const userId = await checkin?.cacheOwner().catch(() => null);
     const result = await auth.signOut({ pushToken: getPushToken() });
     queryClient.clear();
+    // Offline access (owner decision M3) must not outlive a sign-out press, even one made offline,
+    // where SIGNED_OUT (which also clears it, in session.tsx) may not be what the app sees first.
+    await clearOfflineActive();
     // The saved delegate passes belong to this person, not to the next one on this device.
     if (userId) {
       await clearPassCache(userId);

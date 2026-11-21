@@ -1,6 +1,7 @@
 import type { Api } from '@aiaia/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { OFFLINE_ACTIVE_KEY, hasOfflineActive, saveOfflineActive } from '@/lib/offline-access';
 import { SignOutButton } from './SignOutButton';
 import { getPushToken, setPushToken } from './push-token';
 import { ApiProvider } from './useApi';
@@ -9,6 +10,16 @@ import { ApiProvider } from './useApi';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// The offline-access cache's native store, in memory.
+const mockMemory = new Map<string, string>();
+jest.mock('@/lib/large-secure-store', () => ({
+  LargeSecureStore: class {
+    getItem = async (k: string) => mockMemory.get(k) ?? null;
+    setItem = async (k: string, v: string) => void mockMemory.set(k, v);
+    removeItem = async (k: string) => void mockMemory.delete(k);
+  },
+}));
 
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => {
@@ -65,5 +76,16 @@ describe('sign out', () => {
     await renderButton(queryClient);
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(queryClient.getQueryData(['events'])).toBeUndefined());
+  });
+
+  it('clears the offline-access cache itself, even offline and with no SIGNED_OUT event', async () => {
+    // Offline: the sign-out call fails and no session listener runs here at all.
+    mockSignOut.mockResolvedValue({ ok: false, kind: 'offline', message: 'offline' });
+    await saveOfflineActive('a0000000-0000-4000-8000-0000000000f1');
+    expect(await hasOfflineActive('a0000000-0000-4000-8000-0000000000f1')).toBe(true);
+    await renderButton(new QueryClient());
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(mockMemory.has(OFFLINE_ACTIVE_KEY)).toBe(false));
+    expect(await hasOfflineActive('a0000000-0000-4000-8000-0000000000f1')).toBe(false);
   });
 });

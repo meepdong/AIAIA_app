@@ -1,5 +1,5 @@
 import type { PackMember } from '@aiaia/api';
-import type { PackInfo, QueuedScan, ScanStore } from './scan-types';
+import type { PackInfo, QueuedScan, SavedPack, ScanStore } from './scan-types';
 
 /** The part of expo-sqlite's SQLiteDatabase this store uses, so tests can supply another engine. */
 export interface SqlDb {
@@ -13,6 +13,7 @@ export interface SqlDb {
 const SCHEMA = `
 create table if not exists packs (
   owner text not null, event_id text not null, downloaded_at text not null, ends_at text,
+  title text,
   primary key (owner, event_id)
 );
 create table if not exists pack_members (
@@ -86,6 +87,10 @@ async function migrate(db: SqlDb): Promise<void> {
   if (!cols.some((c) => c.name === 'ends_at')) {
     await db.execAsync('alter table packs add column ends_at text');
   }
+  // A database made before packs had a title (the offline screen lists packs by it).
+  if (!cols.some((c) => c.name === 'title')) {
+    await db.execAsync('alter table packs add column title text');
+  }
 }
 
 type MemberRow = Omit<PackMember, 'guardian_names'> & { guardian_names: string };
@@ -109,7 +114,7 @@ export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<S
   await purgeExpired(db, owner, new Date());
 
   return {
-    async savePack(eventId, rows, downloadedAt, endsAt = null) {
+    async savePack(eventId, rows, downloadedAt, endsAt = null, title = null) {
       await db.withTransactionAsync(async () => {
         await db.runAsync('delete from pack_members where owner = ? and event_id = ?', [
           owner,
@@ -133,8 +138,8 @@ export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<S
           );
         }
         await db.runAsync(
-          'insert or replace into packs (owner, event_id, downloaded_at, ends_at) values (?, ?, ?, ?)',
-          [owner, eventId, downloadedAt, endsAt],
+          'insert or replace into packs (owner, event_id, downloaded_at, ends_at, title) values (?, ?, ?, ?, ?)',
+          [owner, eventId, downloadedAt, endsAt, title],
         );
       });
     },
@@ -150,6 +155,22 @@ export async function createSqliteScanStore(db: SqlDb, owner: string): Promise<S
         [owner, eventId],
       );
       return { downloadedAt: head.downloaded_at, count: n?.n ?? 0 };
+    },
+
+    async listPacks(): Promise<SavedPack[]> {
+      const rows = await db.getAllAsync<{
+        event_id: string;
+        title: string | null;
+        downloaded_at: string;
+      }>(
+        'select event_id, title, downloaded_at from packs where owner = ? order by downloaded_at desc',
+        [owner],
+      );
+      return rows.map((r) => ({
+        eventId: r.event_id,
+        title: r.title ?? null,
+        downloadedAt: r.downloaded_at,
+      }));
     },
 
     async findMember(eventId, memberId) {

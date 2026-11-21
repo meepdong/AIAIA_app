@@ -157,3 +157,21 @@ describe('packs do not outlive their event', () => {
     ]);
   });
 });
+
+describe('listPacks (the offline screen)', () => {
+  it("lists only this owner's packs, newest first, with the stored title", async () => {
+    const EVENT2 = 'e0000000-0000-4000-8000-000000000002';
+    const now = Date.now();
+    const a = await openScanStore(OWNER);
+    const b = await openScanStore('someone-else');
+    await a.savePack(EVENT, [member], new Date(now - 60_000).toISOString());
+    await a.savePack(EVENT2, [member], new Date(now).toISOString(), null, 'Fake Camp');
+    await b.savePack('e0000000-0000-4000-8000-000000000003', [member], new Date(now).toISOString());
+    expect(await a.listPacks()).toEqual([
+      { eventId: EVENT2, title: 'Fake Camp', downloadedAt: new Date(now).toISOString() },
+      { eventId: EVENT, title: null, downloadedAt: new Date(now - 60_000).toISOString() },
+    ]);
+    await a.dropEvent(EVENT2);
+    expect((await a.listPacks()).map((p) => p.eventId)).toEqual([EVENT]);
+  });
+});

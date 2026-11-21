@@ -21,6 +21,9 @@ export type QueuedScan = {
 
 export type PackInfo = { downloadedAt: string; count: number };
 
+/** One saved pack, for the offline screen's list. `title` is null for a pack saved without it. */
+export type SavedPack = { eventId: string; title: string | null; downloadedAt: string };
+
 /**
  * Where the event pack and the scan queue live on this device. Native: SQLite (`scan-store.ts`).
  * Web: localStorage (`scan-store.web.ts`), because expo-sqlite on the web needs a WebAssembly build
@@ -35,8 +38,12 @@ export interface ScanStore {
     downloadedAt: string,
     /** The event's ends_at; the pack is purged a day after it. */
     endsAt?: string | null,
+    /** The event's title, so the offline screen can list the pack by name. */
+    title?: string | null,
   ): Promise<void>;
   packInfo(eventId: string): Promise<PackInfo | null>;
+  /** This owner's saved packs, newest download first. */
+  listPacks(): Promise<SavedPack[]>;
   findMember(eventId: string, memberId: string): Promise<PackMember | null>;
   addScan(scan: QueuedScan): Promise<void>;
   /** The scan that counts for this member at this event (pending or accepted), if any. */

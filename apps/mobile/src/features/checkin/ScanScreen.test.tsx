@@ -259,6 +259,41 @@ describe('packs do not outlive their event', () => {
   });
 });
 
+describe('listPacks (the offline screen)', () => {
+  it("lists only this owner's packs, newest first, with the stored title", async () => {
+    const EVENT2 = 'e0000000-0000-4000-8000-000000000002';
+    const later = new Date(Date.now() + 60_000).toISOString();
+    await store.savePack(EVENT2, [pack(RAVI, 'Ravi Fake')], later, null, 'Fake Camp');
+    const other = await createSqliteScanStore(mockDb, 'someone-else');
+    await other.savePack('e0000000-0000-4000-8000-000000000003', [], later, null, 'Other');
+    const list = await store.listPacks();
+    expect(list.map((p) => [p.eventId, p.title])).toEqual([
+      [EVENT2, 'Fake Camp'],
+      [EVENT, null],
+    ]);
+    expect(list[0]?.downloadedAt).toBe(later);
+  });
+
+  it('a database made before packs had a title gains the column and lists its packs', async () => {
+    const file = join(dir, 'old.db');
+    const old = nodeSqlDb(file);
+    await old.db.execAsync(
+      'create table packs (owner text not null, event_id text not null, downloaded_at text not null, primary key (owner, event_id))',
+    );
+    await old.db.runAsync('insert into packs (owner, event_id, downloaded_at) values (?, ?, ?)', [
+      OWNER,
+      EVENT,
+      new Date().toISOString(),
+    ]);
+    try {
+      const s = await createSqliteScanStore(old.db, OWNER);
+      expect((await s.listPacks()).map((p) => [p.eventId, p.title])).toEqual([[EVENT, null]]);
+    } finally {
+      old.close();
+    }
+  });
+});
+
 describe('scan queue', () => {
   it('queue persists: a scan written before a restart is still there afterwards', async () => {
     const out = await evaluateScan(qrFor(ASHA, 1), PUBLIC, store, EVENT);
@@ -374,7 +409,7 @@ describe('scanner screen', () => {
     syncCheckIns.mockReset();
     eventPack.mockReset();
     getEvent.mockReset();
-    getEvent.mockResolvedValue({ ends_at: '2026-12-01T12:00:00.000Z' });
+    getEvent.mockResolvedValue({ ends_at: '2026-12-01T12:00:00.000Z', title: 'Fake Camp' });
     mockNet = { isConnected: false, isInternetReachable: false };
   });
 
@@ -481,6 +516,7 @@ describe('scanner screen', () => {
       [EVENT],
     );
     expect(row?.ends_at).toBe('2026-12-01T12:00:00.000Z');
+    expect((await store.listPacks()).find((p) => p.eventId === EVENT)?.title).toBe('Fake Camp');
     expect(await store.findMember(EVENT, ASHA)).toBeNull();
   });
 });

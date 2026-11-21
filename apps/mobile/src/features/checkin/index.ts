@@ -3,5 +3,6 @@ export { clearPassCache, passCacheKey } from './pass-cache';
 export { ScanScreen } from './ScanScreen';
 export { CheckinScreen } from './CheckinScreen';
 export { CheckinEntry } from './CheckinEntry';
+export { OfflineScreen } from './OfflineScreen';
 export { PrintSheetScreen } from './PrintSheetScreen';
 export { PrintPassesEntry } from './PrintPassesEntry';

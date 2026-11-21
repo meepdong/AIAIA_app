@@ -137,11 +137,15 @@ export function ScanScreen({
     try {
       const rows = await checkin.eventPack(eventId);
       // The pack is purged a day after the event ends; without the end time it counts from now.
-      const endsAt = await events
-        ?.getEvent(eventId)
-        .then((ev) => ev?.ends_at ?? null)
-        .catch(() => null);
-      await s.savePack(eventId, rows, new Date().toISOString(), endsAt ?? null);
+      // The title lets the offline screen list the pack by name.
+      const ev = await events?.getEvent(eventId).catch(() => null);
+      await s.savePack(
+        eventId,
+        rows,
+        new Date().toISOString(),
+        ev?.ends_at ?? null,
+        ev?.title ?? null,
+      );
       setNotice(`Event pack downloaded: ${rows.length} registered.`);
     } catch (e) {
       if (e instanceof ScanError && e.code === 'not_allowed') {

@@ -1,5 +1,5 @@
 import type { PackMember } from '@aiaia/api';
-import type { PackInfo, QueuedScan, ScanStore } from './scan-types';
+import type { PackInfo, QueuedScan, SavedPack, ScanStore } from './scan-types';
 
 /**
  * Web build of the scan store. `expo-sqlite` on the web needs a WebAssembly build and
@@ -10,7 +10,10 @@ import type { PackInfo, QueuedScan, ScanStore } from './scan-types';
  */
 
 type Doc = {
-  packs: Record<string, { downloadedAt: string; endsAt?: string | null; rows: PackMember[] }>;
+  packs: Record<
+    string,
+    { downloadedAt: string; endsAt?: string | null; title?: string | null; rows: PackMember[] }
+  >;
   scans: QueuedScan[];
 };
 
@@ -100,10 +103,19 @@ export async function openScanStore(owner: string): Promise<ScanStore> {
     // Storage blocked: writes will report it.
   }
   return {
-    async savePack(eventId, rows, downloadedAt, endsAt = null) {
+    async savePack(eventId, rows, downloadedAt, endsAt = null, title = null) {
       update((d) => {
-        d.packs[eventId] = { downloadedAt, endsAt, rows };
+        d.packs[eventId] = { downloadedAt, endsAt, title, rows };
       });
+    },
+    async listPacks(): Promise<SavedPack[]> {
+      return Object.entries(read(owner).packs)
+        .map(([eventId, p]) => ({
+          eventId,
+          title: typeof p.title === 'string' ? p.title : null,
+          downloadedAt: p.downloadedAt,
+        }))
+        .sort((a, b) => b.downloadedAt.localeCompare(a.downloadedAt));
     },
     async dropEvent(eventId) {
       update((d) => wipeEvent(d, eventId));
